@@ -6,14 +6,28 @@ import math
 
 #==================== VARIABLES ==============================
 
+# system
 WINDOW_WIDTH = 1500
 WINDOW_HEIGHT = 800
 GRID_LENGTH = 1000
 
+# Camera 
 camera_angle = 90
 camera_height = 500
 camera_radius = 400
 fovY = 120
+
+# player
+player_pos_x = 0
+player_pos_y = 0
+player_hull_angle = 90
+player_turret_angle = 90
+
+ships = []
+max_ships = 5
+ship_spawn_timer = 0
+ship_speed_min = 1.5
+ship_speed_max = 3
 
 
 
@@ -93,6 +107,194 @@ def draw_land():
     glVertex3f(700, -GRID_LENGTH, 20)
     glEnd()
 
+def draw_player():
+    quad = gluNewQuadric()
+
+    glPushMatrix()
+    glColor3f(0.35, 0.35, 0.4)
+    glTranslatef(0, 0, 8)
+    glScalef(4.5, 1.4, 0.8)
+    glutSolidCube(10)
+    glPopMatrix()
+
+    glPushMatrix()
+    glColor3f(0.3, 0.3, 0.35)
+    glTranslatef(0, 0, 8)
+    glRotatef(90, 0, 0, 1)
+    glScalef(1.0, 1.2, 0.8)
+    glutSolidCube(10)
+    glPopMatrix()
+
+    glPushMatrix()
+    glColor3f(0.25, 0.3, 0.25)  
+    glTranslatef(-5, 0, 18)
+    glScalef(2.0, 1.2, 1.2)
+    glutSolidCube(10)
+    glPopMatrix()
+
+    glPushMatrix()
+    glColor3f(0.2, 0.25, 0.2)
+    glTranslatef(-5, 0, 25)
+    glScalef(1.2, 0.8, 0.8)
+    glutSolidCube(10)
+    glPopMatrix()
+
+    glPushMatrix()
+    glColor3f(0.1, 0.1, 0.1)  # Black
+    glTranslatef(5, 0, 23)
+    glRotatef(90, 0, 1, 0)  # Point along X-axis
+    gluCylinder(quad, 1.2, 1.2, 20, 12, 12)
+    glPopMatrix()
+    
+    # 6. Radar/Antenna (back of cabin)
+    glPushMatrix()
+    glColor3f(0.15, 0.15, 0.15)
+    glTranslatef(-8, 0, 28)
+    glRotatef(180, 1, 0, 0)
+    gluCylinder(quad, 0.5, 0.5, 12, 8, 8)
+    glPopMatrix()
+    
+    # 7. Details: Deck strips
+    glPushMatrix()
+    glColor3f(0.5, 0.5, 0.55)
+    glTranslatef(0, 8, 12)
+    glScalef(4.0, 0.2, 0.5)
+    glutSolidCube(10)
+    glPopMatrix()
+    
+    glPushMatrix()
+    glColor3f(0.5, 0.5, 0.55)
+    glTranslatef(0, -8, 12)
+    glScalef(4.0, 0.2, 0.5)
+    glutSolidCube(10)
+    glPopMatrix()
+
+def draw_cargo_ship(is_red_flag, health, max_health):
+    quad = gluNewQuadric()
+    
+    # 1. Main Hull (long, flat bottom)
+    glPushMatrix()
+    glColor3f(0.2, 0.2, 0.25)  # Dark blue-grey
+    glTranslatef(0, 0, 6)
+    glScalef(7.0, 2.0, 0.8)
+    glutSolidCube(10)
+    glPopMatrix()
+    
+    # 2. Bow (front)
+    glPushMatrix()
+    glColor3f(0.18, 0.18, 0.22)
+    glTranslatef(30, 0, 6)
+    glRotatef(90, 0, 0, 1)
+    glScalef(1.0, 1.5, 0.8)
+    glutSolidCube(10)
+    glPopMatrix()
+    
+    # 3. Cargo Containers (stacked on deck)
+    # Bottom row
+    glPushMatrix()
+    glColor3f(0.85, 0.5, 0.15)  # Orange
+    glTranslatef(0, 18, 12)
+    glScalef(3.5, 1.2, 1.0)
+    glutSolidCube(10)
+    glPopMatrix()
+    
+    glPushMatrix()
+    glColor3f(0.15, 0.4, 0.7)  # Blue
+    glTranslatef(-8, 18, 12)
+    glScalef(3.0, 1.2, 1.0)
+    glutSolidCube(10)
+    glPopMatrix()
+    
+    glPushMatrix()
+    glColor3f(0.85, 0.5, 0.15)  # Orange
+    glTranslatef(8, 18, 12)
+    glScalef(3.0, 1.2, 1.0)
+    glutSolidCube(10)
+    glPopMatrix()
+    
+    # Top row (smaller stack)
+    glPushMatrix()
+    glColor3f(0.15, 0.4, 0.7)  # Blue
+    glTranslatef(-5, 18, 22)
+    glScalef(2.5, 1.0, 0.8)
+    glutSolidCube(10)
+    glPopMatrix()
+    
+    glPushMatrix()
+    glColor3f(0.85, 0.5, 0.15)  # Orange
+    glTranslatef(5, 18, 22)
+    glScalef(2.5, 1.0, 0.8)
+    glutSolidCube(10)
+    glPopMatrix()
+    
+    # 4. Smokestacks (at back)
+    glPushMatrix()
+    glColor3f(0.1, 0.1, 0.1)
+    glTranslatef(-25, 10, 10)
+    gluCylinder(quad, 3, 3, 18, 10, 10)
+    glPopMatrix()
+    
+    glPushMatrix()
+    glColor3f(0.1, 0.1, 0.1)
+    glTranslatef(-25, -10, 10)
+    gluCylinder(quad, 3, 3, 18, 10, 10)
+    glPopMatrix()
+    
+    # 5. Bridge (at back top)
+    glPushMatrix()
+    glColor3f(0.9, 0.9, 0.95)  # White
+    glTranslatef(-28, 0, 16)
+    glScalef(2.0, 1.5, 1.2)
+    glutSolidCube(10)
+    glPopMatrix()
+    
+    # 6. Flag Pole & Flag
+    glPushMatrix()
+    glColor3f(0.8, 0.8, 0.8)
+    glTranslatef(-30, 0, 22)
+    gluCylinder(quad, 0.8, 0.8, 25, 8, 8)
+    glPopMatrix()
+    
+    # Flag (RED for enemy, GREEN for ally)
+    glPushMatrix()
+    if is_red_flag:
+        glColor3f(1.0, 0.0, 0.0)  # Red - ENEMY
+    else:
+        glColor3f(0.0, 1.0, 0.0)  # Green - ALLY
+    glTranslatef(-30, 0, 40)
+    glBegin(GL_QUADS)
+    glVertex3f(0, 0, 0)
+    glVertex3f(-15, 0, 0)
+    glVertex3f(-15, 0, 10)
+    glVertex3f(0, 0, 10)
+    glEnd()
+    glPopMatrix()
+
+def draw_health_bar(x, y, health, max_health):
+    ratio = health / max_health
+    
+    glPushMatrix()
+    glTranslatef(x, y, 55)
+    
+    # Background (red - damage)
+    glColor3f(0.3, 0.0, 0.0)
+    glScalef(4.0, 0.8, 0.3)
+    glutSolidCube(10)
+    
+    # Foreground (green to red based on health)
+    glTranslatef(0, 0, 0.5)
+    if ratio > 0.6:
+        glColor3f(0.0, 1.0, 0.0)  # Green
+    elif ratio > 0.3:
+        glColor3f(1.0, 1.0, 0.0)  # Yellow
+    else:
+        glColor3f(1.0, 0.0, 0.0)  # Red
+    
+    glScalef(ratio, 1.0, 1.0)
+    glutSolidCube(10)
+    glPopMatrix()
+
+
 def keyboardListener(key, x, y):
     pass
 
@@ -125,8 +327,25 @@ def showScreen():
 
     setupCamera()
 
+    # drawinh map
     draw_sea()
     draw_land()
+
+    # player
+    glPushMatrix()
+    glTranslatef(player_pos_x, player_pos_y, 0)
+    glRotatef(player_hull_angle - 90, 0, 0, 1)
+    glTranslatef(0, 0, 0)
+    glScalef(2, 2, 2)
+    draw_player()
+    glPopMatrix()
+
+    for s in ships:
+        glPushMatrix()
+        glTranslatef(s[0], s[1], 0)
+        draw_cargo_ship(s[3], s[4], s[5])
+        glPopMatrix()
+        draw_health_bar(s[0], s[1], s[4], s[5])
 
     glutSwapBuffers()
 
