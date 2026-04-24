@@ -38,7 +38,11 @@ current_weapon = 1
 rpg_ammo = 10
 firing_cooldown = 0
 
-
+# Gameplay
+score = 0
+penalties = 0
+max_penalties = 3
+game_over = False
 
 
 
@@ -116,7 +120,7 @@ def draw_land():
 
 def draw_player():
     quad = gluNewQuadric()
-    # 1. Boat Hull (rotates with hull angle)
+    # 1. Boat Hull 
     glPushMatrix()
     glColor3f(0.35, 0.35, 0.4)
     glTranslatef(0, 0, 8)
@@ -131,7 +135,7 @@ def draw_player():
     glScalef(1.0, 1.2, 0.8)
     glutSolidCube(10)
     glPopMatrix()
-    # 3. Cabin Base (FIXED - rotates with turret)
+    # 3. Cabin Base 
     glPushMatrix()
     # Rotate turret independently from hull
     glRotatef(player_turret_angle - player_hull_angle, 0, 0, 1)
@@ -141,7 +145,7 @@ def draw_player():
     glScalef(2.0, 1.2, 1.2)
     glutSolidCube(10)
     glPopMatrix()
-    # 4. Turret Head (FIXED - rotates with turret)  
+    # 4. Turret Head (rotates with turret)  
     glPushMatrix()
     glRotatef(player_turret_angle - player_hull_angle, 0, 0, 1)
     
@@ -150,7 +154,7 @@ def draw_player():
     glScalef(1.2, 0.8, 0.8)
     glutSolidCube(10)
     glPopMatrix()
-    # 5. Gun Barrel (FIXED - rotates with turret)
+    # 5. Gun Barrel (rotates with turret)
     glPushMatrix()
     glRotatef(player_turret_angle - player_hull_angle, 0, 0, 1)
     
@@ -160,10 +164,10 @@ def draw_player():
     gluCylinder(quad, 1.2, 1.2, 20, 12, 12)
     glPopMatrix()
     
-    # 6. Radar/Antenna (stays with cabin)
+    # 6. Radar (stays with cabin)
     glPushMatrix()
     glColor3f(0.15, 0.15, 0.15)
-    glTranslatef(-8, 0, 28)
+    glTranslatef(-20, 5, 20)
     glRotatef(180, 1, 0, 0)
     gluCylinder(quad, 0.5, 0.5, 12, 8, 8)
     glPopMatrix()
@@ -188,7 +192,7 @@ def draw_cargo_ship(is_red_flag, health, max_health):
     
     # 1. Main Hull (long, flat bottom)
     glPushMatrix()
-    glColor3f(0.2, 0.2, 0.25)  # Dark blue-grey
+    glColor3f(0.2, 0.2, 0.25)  
     glTranslatef(0, 0, 6)
     glScalef(7.0, 2.0, 0.8)
     glutSolidCube(10)
@@ -206,30 +210,30 @@ def draw_cargo_ship(is_red_flag, health, max_health):
     # 3. Cargo Containers (stacked on deck)
     # Bottom row
     glPushMatrix()
-    glColor3f(0.85, 0.5, 0.15)  # Orange
-    glTranslatef(-5, 0, 12)  # FIXED: Y=0, not Y=18
+    glColor3f(0.85, 0.5, 0.15) 
+    glTranslatef(-5, 0, 12)  
     glScalef(3.5, 1.8, 1.0)
     glutSolidCube(10)
     glPopMatrix()
     
     glPushMatrix()
-    glColor3f(0.15, 0.4, 0.7)  # Blue
-    glTranslatef(8, 0, 12)  # FIXED: Y=0
+    glColor3f(0.5, 0.4, 0.3)
+    glTranslatef(8, 0, 12) 
     glScalef(2.5, 1.8, 1.0)
     glutSolidCube(10)
     glPopMatrix()
     
     # Top row
     glPushMatrix()
-    glColor3f(0.85, 0.5, 0.15)  # Orange
-    glTranslatef(-5, 0, 22)  # FIXED: Y=0
+    glColor3f(0.85, 0.5, 0.15)
+    glTranslatef(-5, 0, 22)  
     glScalef(2.5, 1.5, 0.8)
     glutSolidCube(10)
     glPopMatrix()
     
     glPushMatrix()
-    glColor3f(0.15, 0.4, 0.7)  # Blue
-    glTranslatef(8, 0, 22)  # FIXED: Y=0
+    glColor3f(0.5, 0.4, 0.7)  
+    glTranslatef(8, 0, 22)  
     glScalef(2.0, 1.5, 0.8)
     glutSolidCube(10)
     glPopMatrix()
@@ -262,12 +266,12 @@ def draw_cargo_ship(is_red_flag, health, max_health):
     gluCylinder(quad, 0.8, 0.8, 25, 8, 8)
     glPopMatrix()
     
-    # Flag (RED for enemy, GREEN for ally)
+    # Flag 
     glPushMatrix()
     if is_red_flag:
-        glColor3f(1.0, 0.0, 0.0)  # Red - ENEMY
+        glColor3f(1.0, 0.0, 0.0)  
     else:
-        glColor3f(0.0, 1.0, 0.0)  # Green - ALLY
+        glColor3f(0.0, 1.0, 0.0)  
     glTranslatef(-30, 0, 40)
     glBegin(GL_QUADS)
     glVertex3f(0, 0, 0)
@@ -343,9 +347,6 @@ def fire_weapon():
         print("No RPG Ammo!")
         return
     
-    # Calculate the absolute angle of the turret
-    # The ship is rotated by (player_hull_angle - 90) and the turret by (player_turret_angle - player_hull_angle)
-    # So the total rotation of the turret is (player_turret_angle - 90)
     rad = math.radians(player_turret_angle - 90)
     direction_x = math.cos(rad)
     direction_y = math.sin(rad)
@@ -363,8 +364,6 @@ def fire_weapon():
     dx = (direction_x * speed)
     dy = (direction_y * speed)
 
-    # The gun tip is at local x=25 (base at 5 + length 20). 
-    # With a scale of 2, the true distance is 50.
     start_x = player_pos_x + (direction_x * 50)
     start_y = player_pos_y + (direction_y * 50)
 
@@ -373,7 +372,7 @@ def fire_weapon():
 
 def keyboardListener(key, x, y):
     global player_pos_x, player_pos_y, player_hull_angle, player_turret_angle
-    global current_weapon
+    global current_weapon, game_over, score, penalties
     speed = 12
     turn_speed = 3
 
@@ -397,11 +396,20 @@ def keyboardListener(key, x, y):
     
     if key == b'd':
         player_hull_angle -= turn_speed
+
+    if key == b"r":
+        game_over = False
+        score = 0
+        penalties = 0
+        projectiles.clear()
+        ships.clear()
     
     if key == b"1":
         current_weapon = 1
     if key == b"2":
         current_weapon = 2
+    
+    
 
 def specialKeyListener(key, x, y):
     global camera_angle, camera_height, player_turret_angle
@@ -417,11 +425,16 @@ def specialKeyListener(key, x, y):
 
 def mouseListener(button, state, x, y):
     if button == GLUT_LEFT_BUTTON and state == GLUT_DOWN:
+        print("Left click works!")
         fire_weapon()
 
 def idle():
     global ship_spawn_timer, ships
     global firing_cooldown, projectiles
+    global score, penalties, game_over
+
+    if game_over:
+        return
 
     if firing_cooldown > 0:
         firing_cooldown -= 1
@@ -430,35 +443,64 @@ def idle():
     if ship_spawn_timer > ship_spawn_rate and len(ships) < max_ships:
         ship_spawn_timer = 0
         
-        # Spawn at right edge
         y_pos = random.randint(-GRID_LENGTH + 100, GRID_LENGTH - 100)
         speed = random.uniform(ship_speed_min, ship_speed_max)
         
-        # Random: red (enemy) or green (ally)
         is_red = random.choice([True, False])
         health = 50 if is_red else 30
         
         # Ship data: [x, y, speed, is_red, health, max_health]
         ships.append([GRID_LENGTH, y_pos, speed, is_red, health, health])
     
-    # 2. Move ships left
-    for s in ships:
-        s[0] -= s[2]  # Move left by speed
     
-    # 3. Remove ships that went off-screen
+    for s in ships:
+        s[0] -= s[2]  
+    
+    escaped_ships = [s for s in ships if s[0] < -GRID_LENGTH]
+    for s in escaped_ships:
+        if s[3]:
+            penalties += 1
+            print(f"Red ship escaped! Penalty {penalties}")
+    
     ships = [s for s in ships if s[0] > -GRID_LENGTH - 100]
 
     # Move projectiles
-
     active_projectiles = []
+
     for p in projectiles:
         p[0] += p[2]
         p[1] += p[3]
 
-        if -GRID_LENGTH - 100 < p[0] < GRID_LENGTH + 100:
+        hit_ship = False
+        for s in ships:
+            dist = math.sqrt((p[0] - s[0])**2 + (p[1] - s[1])**2)
+
+            if dist < 40:
+                s[4] -= p[5]
+                hit_ship = True 
+                print(f"Hit! Damage: {p[5]}")
+
+                if s[4] <= 0:
+                    if s[3]:
+                        score += 100
+                        print(f"Red ship destroyed! Score: {score}")
+                    else:
+                        penalties += 1
+                        print(f"Green ship destroyed! Penalties {penalties}")
+                break
+        
+        if not hit_ship and (-GRID_LENGTH - 100 < p[0] < GRID_LENGTH + 100) and (-GRID_LENGTH - 100 < p[1] < GRID_LENGTH + 100):
             active_projectiles.append(p)
-    
+            
     projectiles = active_projectiles
+    
+    ships = [s for s in ships if s[4] > 0]
+
+    if penalties >= max_penalties:
+        game_over = True
+        print(f"Game over! Finaly Score: {score}")
+
+
     
     glutPostRedisplay()
 
@@ -505,6 +547,11 @@ def showScreen():
         draw_text(10, WINDOW_HEIGHT - 30, f"Machine Gun [Ammo = Unlimited]")
     elif current_weapon == 2:
         draw_text(10, WINDOW_HEIGHT - 30, f"RPG [Ammo = {rpg_ammo}]")
+
+    if game_over:
+        draw_text(WINDOW_WIDTH//2, WINDOW_HEIGHT//2, "GAME OVER")
+        draw_text(WINDOW_WIDTH//2, WINDOW_HEIGHT//2 - 30, f"Score: {score}")
+        draw_text(WINDOW_WIDTH//2, WINDOW_HEIGHT//2 - 60, f"Press 'r' to Restart")
 
     glutSwapBuffers()
 
