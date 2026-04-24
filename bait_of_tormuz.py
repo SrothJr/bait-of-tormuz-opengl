@@ -485,7 +485,11 @@ def idle():
     for s in ships:
         if abs(next_x - s[0]) < 185 and abs(next_y - s[1]) < 55:
             can_move = False
-            player_health -= 0.5
+            player_health -= 10
+            s[4] -= 20
+            player_pos_x = player_pos_x - (dx * 700)
+            player_pos_y = player_pos_y - (dy * 700)
+            gear = 1
             if player_health <= 0:
                 game_over = True     
                 break
