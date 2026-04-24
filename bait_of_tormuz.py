@@ -456,6 +456,7 @@ def idle():
     global ship_spawn_timer, ships
     global firing_cooldown, projectiles
     global score, penalties, game_over
+    global rpg_ammo
 
     if game_over:
         return
@@ -497,9 +498,8 @@ def idle():
 
         hit_ship = False
         for s in ships:
-            dist = math.sqrt((p[0] - s[0])**2 + (p[1] - s[1])**2)
+            if (s[0] - 140 < p[0] < s[0] + 140) and (s[1] - 40 < p[1] < s[1] + 40):
 
-            if dist < 40:
                 s[4] -= p[5]
                 hit_ship = True 
                 print(f"Hit! Damage: {p[5]}")
@@ -508,6 +508,10 @@ def idle():
                     if s[3]:
                         score += 100
                         print(f"Red ship destroyed! Score: {score}")
+
+                        if score % 1000 == 0:
+                            rpg_ammo += 5
+                            print(f"Bonus +5 RPG Ammo! [Total: {rpg_ammo}]")
                     else:
                         penalties += 1
                         print(f"Green ship destroyed! Penalties {penalties}")
