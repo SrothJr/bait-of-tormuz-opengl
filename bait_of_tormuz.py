@@ -15,7 +15,7 @@ GRID_LENGTH = 1000
 camera_angle = 90
 camera_height = 500
 camera_radius = 400
-fovY = 120
+fovY = 110
 camera_mode = 1
 
 # player
@@ -42,9 +42,9 @@ firing_cooldown = 0
 # Gameplay
 score = 0
 penalties = 0
-max_penalties = 3
+max_penalties = 5
 game_over = False
-
+total_damage = 0
 
 
 
@@ -300,19 +300,23 @@ def draw_cargo_ship(is_red_flag, health, max_health):
     glEnd()
     glPopMatrix()
 
-def draw_health_bar(x, y, health, max_health):
+def draw_health_bar(health, max_health):
     ratio = health / max_health
     
     glPushMatrix()
-    glTranslatef(x, y, 55)
+    glTranslatef(0, 0, 35)
     
     # Background (red - damage)
+    glPushMatrix()
     glColor3f(0.3, 0.0, 0.0)
     glScalef(4.0, 0.8, 0.3)
     glutSolidCube(10)
-    
+    glPopMatrix()
+
     # Foreground (green to red based on health)
-    glTranslatef(0, 0, 0.5)
+    glPushMatrix()
+    offset_x = -20 * (1 - ratio)
+    glTranslatef(offset_x, 0, 0.5)
     if ratio > 0.6:
         glColor3f(0.0, 1.0, 0.0)  # Green
     elif ratio > 0.3:
@@ -320,8 +324,9 @@ def draw_health_bar(x, y, health, max_health):
     else:
         glColor3f(1.0, 0.0, 0.0)  # Red
     
-    glScalef(ratio, 1.0, 1.0)
+    glScalef(4 * ratio, 0.8, 0.3)
     glutSolidCube(10)
+    glPopMatrix()
     glPopMatrix()
 
 def draw_projectiles():
@@ -456,7 +461,7 @@ def idle():
     global ship_spawn_timer, ships
     global firing_cooldown, projectiles
     global score, penalties, game_over
-    global rpg_ammo
+    global rpg_ammo, total_damage
 
     if game_over:
         return
@@ -469,10 +474,17 @@ def idle():
         ship_spawn_timer = 0
         
         y_pos = random.randint(-GRID_LENGTH + 100, GRID_LENGTH - 100)
-        speed = random.uniform(ship_speed_min, ship_speed_max)
         
-        is_red = random.choice([True, False])
-        health = 50 if is_red else 30
+        speed_multiplier = 1 + (score / 1000)
+        speed = random.uniform(ship_speed_min, ship_speed_max) * speed_multiplier
+        
+        red_count = sum(1 for s in ships if s[3])
+        if red_count < 2:
+            is_red = True
+        else:
+            is_red = random.choice([True, False])
+        
+        health = 100 if is_red else 70
         
         # Ship data: [x, y, speed, is_red, health, max_health]
         ships.append([GRID_LENGTH, y_pos, speed, is_red, health, health])
@@ -501,8 +513,9 @@ def idle():
             if (s[0] - 140 < p[0] < s[0] + 140) and (s[1] - 40 < p[1] < s[1] + 40):
 
                 s[4] -= p[5]
+                total_damage += p[5]
                 hit_ship = True 
-                print(f"Hit! Damage: {p[5]}")
+                print(f"Hit! Total Damage: {total_damage}")
 
                 if s[4] <= 0:
                     if s[3]:
@@ -511,7 +524,10 @@ def idle():
 
                         if score % 1000 == 0:
                             rpg_ammo += 5
+                            penalties = max(0, penalties - 1)
                             print(f"Bonus +5 RPG Ammo! [Total: {rpg_ammo}]")
+                            print(f"One penalty reduced! Penalties = {penalties}")
+
                     else:
                         penalties += 1
                         print(f"Green ship destroyed! Penalties {penalties}")
@@ -560,8 +576,8 @@ def showScreen():
         glTranslatef(s[0], s[1], 0)
         glScalef(4, 4, 4)
         draw_cargo_ship(s[3], s[4], s[5])
+        draw_health_bar(s[4], s[5])
         glPopMatrix()
-        draw_health_bar(s[0], s[1], s[4], s[5])
     
     # projectiles
     glPushMatrix()
