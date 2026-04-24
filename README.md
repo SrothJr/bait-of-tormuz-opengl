@@ -25,17 +25,19 @@ The simulation features advanced world-space interactions:
 
 ---
 
+## 🗺️ Tactical Environment
+![Map Overview](docs/map_view.png)
+*The tactical theater includes a deep sea zone, coastal land borders, and a strategic strait (peninsula) that restricts vessel navigation. All terrain features use mathematical boundary detection to enforce realistic constraints.*
+
+---
+
 ## 🛠️ Technical Implementation
 
 ### 1. Dynamic Text-Based HUD
 Instead of complex geometry, the HUD utilizes standard bitmap characters. The health bar is procedurally generated using character repetition, ensuring high visibility regardless of the 3D scene complexity.
 
-```python
-def draw_player_dashboard():
-    # Hull integrity bar using character repetition
-    health_bar = "|" * player_health
-    draw_text(WINDOW_WIDTH//2 - 200, 25, health_bar)
-```
+![Dashboard Overview](docs/dashboard.png)
+*The HUD displays real-time data: Propulsion Gear, Tactical Score, Penalties, Hull Integrity (Health Bar), and Weapon Battery status.*
 
 ### 2. Difficulty Scaling
 Enemy vessel speed is calculated using a dynamic multiplier that increases as the player's tactical score grows, ensuring the challenge scales with player skill.
@@ -55,9 +57,23 @@ if (s[0] - 140 < p[0] < s[0] + 140) and (s[1] - 40 < p[1] < s[1] + 40):
 
 ---
 
+## 📸 Combat Visuals
+
+### Modern Follow Camera
+![Follow Mode](docs/follow_camera.png)
+*Switching to Follow Mode locks the perspective to the turret's orientation, providing a modern warship combat experience.*
+
+### Battery Engagement
+| Machine Gun Engagement | RPG Ballistics |
+| :--- | :--- |
+| ![Combat MG](docs/combat_mg.png) | ![Combat RPG](docs/combat_rpg.png) |
+| *Rapid-fire MG battery.* | *RPGs facing the flight vector.* |
+
+---
+
 ## 🕹️ Controls
 - **W / S**: Shift Gears Up/Down.
-- **A / D**: Rotate Vessel Hull.
+- **A / D**: Rotate Vessel Hull (Steer).
 - **Left / Right Arrows**: Independent Turret Rotation.
 - **1 / 2**: Toggle Weapons System.
 - **Mouse Left / R-Shift**: Fire Main Battery.
@@ -66,19 +82,21 @@ if (s[0] - 140 < p[0] < s[0] + 140) and (s[1] - 40 < p[1] < s[1] + 40):
 
 ---
 
-## 📸 Tactical View (Screenshots)
+## 🚀 Setup & Portability
+This repository is designed for maximum portability. It includes a local `OpenGL/` directory containing the necessary libraries, so no external installation of OpenGL is required.
 
-> **Instructions:** Place screenshots in `/docs` to populate these views.
-
-- **[Follow Camera View]**: docs/follow_camera.png
-- **[AABB Collision in Action]**: docs/aabb_view.png
-- **[RPG Ballistic Trajectory]**: docs/rpg_facing.png
-- **[Naval HUD Overview]**: docs/hud_view.png
+**To run the game:**
+1. Ensure Python 3.x is installed.
+2. Navigate to the root directory.
+3. Execute:
+   ```bash
+   python bait_of_tormuz.py
+   ```
 
 ---
 
-## 🚀 Setup
-```bash
-pip install PyOpenGL
-python bait_of_tormuz.py
-```
+## ⚓ Project Structure
+- `bait_of_tormuz.py`: The main game engine and logic.
+- `OpenGL/`: Local OpenGL library files (Internal dependencies).
+- `docs/`: Tactical screenshots and visual assets.
+- `LICENSE`: Project licensing information.
