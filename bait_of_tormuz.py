@@ -23,7 +23,7 @@ player_pos_x = 0
 player_pos_y = 0
 player_hull_angle = 0
 player_turret_angle = 0
-speeds = [-0.03, 0, 0.05, 0.1]
+speeds = [-0.05, 0, 0.07, 0.14]
 gear = 1
 player_health = 100
 player_max_health = 100
@@ -361,6 +361,28 @@ def draw_projectiles():
         glPopMatrix()
 
 
+def draw_player_dashboard():
+    if gear == 0:
+        gear_label = "REVERSE"
+    elif gear == 1:
+        gear_label = "STOP"
+    elif gear == 2:
+        gear_label = "1/2"
+    elif gear == 3:
+        gear_label = "FULL"
+    
+    draw_text(50, 40, f"GEAR: {gear_label}")
+    draw_text(30, WINDOW_HEIGHT - 40, f"TACTICAL SCORE: {score}")
+    draw_text(WINDOW_WIDTH - 300, WINDOW_HEIGHT - 40, f"PENALTIES: {penalties} / {max_penalties}")
+    health_bar = "|" * player_health
+    draw_text(WINDOW_WIDTH//2 - 200, 25, health_bar)
+    draw_text(WINDOW_WIDTH//2 - 65, 50, f"HULL: {int(player_health)}%")
+    if current_weapon == 1:
+        draw_text(WINDOW_WIDTH - 400, 40, f"WEAPON: MG - AMMO : UNLIMITED")
+    elif current_weapon == 2:
+        draw_text(WINDOW_WIDTH - 400, 40, f"WEAPON: RPG - AMMO : {rpg_ammo}")
+    draw_text(WINDOW_WIDTH - 400, 15, f"TOTAL DAMAGE DEALT: {int(total_damage)}")
+
 
 
 
@@ -401,7 +423,7 @@ def fire_weapon():
 def keyboardListener(key, x, y):
     global player_pos_x, player_pos_y, player_hull_angle, player_turret_angle
     global current_weapon, game_over, score, penalties
-    global speeds, gear
+    global speeds, gear, player_health, total_damage, rpg_ammo
 
     turn_speed = 3
 
@@ -418,9 +440,16 @@ def keyboardListener(key, x, y):
         player_hull_angle -= turn_speed
 
     if key == b"r":
+        player_health = 100
+        gear = 1
+        player_pos_x = 0
+        player_pos_y = 0
         game_over = False
         score = 0
         penalties = 0
+        total_damage = 0
+        rpg_ammo = 10
+
         projectiles.clear()
         ships.clear()
     
@@ -558,6 +587,7 @@ def idle():
                         if score % 1000 == 0:
                             rpg_ammo += 5
                             penalties = max(0, penalties - 1)
+                            health = min(100, health + 10)
                             print(f"Bonus +5 RPG Ammo! [Total: {rpg_ammo}]")
                             print(f"One penalty reduced! Penalties = {penalties}")
 
@@ -618,12 +648,7 @@ def showScreen():
     glPopMatrix()
 
 
-
-    # Texts
-    if current_weapon == 1:
-        draw_text(10, WINDOW_HEIGHT - 30, f"Machine Gun [Ammo = Unlimited]")
-    elif current_weapon == 2:
-        draw_text(10, WINDOW_HEIGHT - 30, f"RPG [Ammo = {rpg_ammo}]")
+    draw_player_dashboard()
 
     if game_over:
         draw_text(WINDOW_WIDTH//2, WINDOW_HEIGHT//2, "GAME OVER")
