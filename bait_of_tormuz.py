@@ -25,6 +25,8 @@ player_hull_angle = 0
 player_turret_angle = 0
 speeds = [-0.03, 0, 0.05, 0.1]
 gear = 1
+player_health = 100
+player_max_health = 100
 
 # ships
 ships = []
@@ -453,23 +455,45 @@ def mouseListener(button, state, x, y):
         else:
             camera_mode = 1
 
+def is_in_strait(x, y):
+    if y < -1000 or y > -600:
+        return False
+    limit_y = -600 - (400/700) * abs(x)
+    return y < limit_y
+
 def idle():
     global ship_spawn_timer, ships
     global firing_cooldown, projectiles
     global score, penalties, game_over
     global rpg_ammo, total_damage
     global speeds, gear, player_pos_x, player_pos_y, player_hull_angle
-
+    global player_health
     if game_over:
         return
 
     dx = math.cos(math.radians(player_hull_angle - 90)) * speeds[gear]
     dy = math.sin(math.radians(player_hull_angle - 90)) * speeds[gear]
 
-    if -GRID_LENGTH < player_pos_x + dx < GRID_LENGTH:
-        player_pos_x += dx
-    if -GRID_LENGTH < player_pos_y + dy < GRID_LENGTH:
-        player_pos_y += dy
+    next_x = player_pos_x + dx
+    next_y = player_pos_y + dy
+
+    can_move = True
+
+    if abs(next_x) > GRID_LENGTH or abs(next_y) > GRID_LENGTH or is_in_strait(next_x, next_y):
+        can_move = False
+    
+    for s in ships:
+        if abs(next_x - s[0]) < 185 and abs(next_y - s[1]) < 55:
+            can_move = False
+            player_health -= 0.5
+            if player_health <= 0:
+                game_over = True     
+                break
+    
+    if can_move:
+        player_pos_x, player_pos_y = next_x, next_y
+
+    
 
     if firing_cooldown > 0:
         firing_cooldown -= 1
