@@ -1,121 +1,84 @@
 # Bait of Tormuz: Naval Defense
 
-A professional-grade 3D Naval Combat Simulator built using Python and the OpenGL (PyOpenGL) fixed-function pipeline. Defend your waters against enemy cargo ships while navigating complex straits and managing your vessel's propulsion and tactical systems.
+A specialized 3D Naval Combat Simulator built with Python and PyOpenGL. This project focuses on tactical navigation, turret ballistics, and real-time fleet management.
 
 ---
 
-## 🎮 Game Overview
-In **Bait of Tormuz**, you command a modern naval vessel. Your mission is to intercept red-flagged enemy cargo ships. You must manage your ship's speed through a multi-gear system, aim your turret independently of your hull, and ensure you don't damage neutral (green-flagged) vessels.
+## 🎮 Gameplay & Mechanics
 
-### Key Features
-- **Dual Camera System:** Switch between a strategic orbital view and a modern turret-locked follow camera.
-- **Realistic Propulsion:** 4-gear movement system including Reverse, Neutral, and high-speed settings.
-- **Tactical Arsenal:** Toggle between a rapid-fire Machine Gun and high-impact RPGs.
-- **Dynamic Difficulty:** Enemy ships scale their speed as your score increases, and the game ensures a constant threat level.
-- **Advanced HUD:** Professional 2D overlay providing real-time hull integrity, gear status, and tactical data.
+### 🚢 Vessel Propulsion (Gear System)
+The ship operates on a 4-gear discrete movement system. Unlike standard WASD movement, the ship maintains momentum based on its current gear setting:
+- **REVERSE:** Negative momentum for backward maneuvering.
+- **STOP (Neutral):** Full stop.
+- **1/2 SPEED:** Standard cruising speed.
+- **FULL SPEED:** Maximum velocity for intercepting distant targets.
 
----
+### ⚔️ Tactical Arsenal
+- **Machine Gun (MG):** Unlimited ammunition, high rate of fire, 10 damage per round.
+- **RPG Battery:** High-impact shells dealing 50 damage. Projectiles dynamically rotate to face their trajectory vector for visual realism.
 
-## 🕹 Controls
-| Input | Action |
-| :--- | :--- |
-| **W / S** | Shift Gears (Up / Down) |
-| **A / D** | Rotate Ship Hull (Steering) |
-| **Arrow Left / Right** | Rotate Turret Independently |
-| **Arrow Up / Down** | Adjust Camera Height (Free Mode) |
-| **Mouse Left Click / R-Shift** | Fire Weapon |
-| **Mouse Right Click** | Toggle Camera Mode (Free / Follow) |
-| **1 / 2** | Switch Weapon (Machine Gun / RPG) |
-| **R** | Restart Game / Re-engage |
+### 🛡️ Survival & Collision
+The simulation features advanced world-space interactions:
+- **Coastal Barriers:** A mathematical boundary prevents the vessel from entering the "Strait" landmass at the bottom of the map.
+- **Naval Impacts:** Colliding with a cargo ship triggers a defensive **knockback** maneuver, resets the vessel to "STOP" gear, and applies significant hull damage (-10).
+- **Hull Integrity:** Health is monitored via a dynamic string-based HUD. Scoring 1000 points grants an emergency repair (+10 Hull) and bonus RPG ammo.
 
 ---
 
-## 🛠 Technical Implementation
+## 🛠️ Technical Implementation
 
-### 1. Hybrid 2D/3D Rendering (HUD)
-The game uses a sophisticated projection switching technique to render a 2D interface over a 3D environment. This is achieved by disabling depth testing and swapping the projection matrix during the render loop.
+### 1. Dynamic Text-Based HUD
+Instead of complex geometry, the HUD utilizes standard bitmap characters. The health bar is procedurally generated using character repetition, ensuring high visibility regardless of the 3D scene complexity.
 
 ```python
-def draw_ui_bar(x, y, width, height, ratio, color):
-    glMatrixMode(GL_PROJECTION)
-    glPushMatrix()
-    glLoadIdentity()
-    gluOrtho2D(0, WINDOW_WIDTH, 0, WINDOW_HEIGHT) # Switch to screen-space
-    
-    glDisable(GL_DEPTH_TEST) # Ensure UI is always on top
-    # ... Draw Quads ...
-    glEnable(GL_DEPTH_TEST)
-    
-    glPopMatrix()
-    glMatrixMode(GL_PROJECTION)
+def draw_player_dashboard():
+    # Hull integrity bar using character repetition
+    health_bar = "|" * player_health
+    draw_text(WINDOW_WIDTH//2 - 200, 25, health_bar)
 ```
 
-### 2. Collision Physics
-#### Ship-to-Ship (AABB)
-Instead of simple circular distance, the game uses **Axis-Aligned Bounding Boxes (AABB)** to account for the rectangular nature of naval vessels.
+### 2. Difficulty Scaling
+Enemy vessel speed is calculated using a dynamic multiplier that increases as the player's tactical score grows, ensuring the challenge scales with player skill.
 ```python
-# Check if projectile (p) is inside cargo ship (s) boundaries
+# Speed scales by 10% for every 100 points
+speed_multiplier = 1 + (score / 1000)
+speed = random.uniform(ship_speed_min, ship_speed_max) * speed_multiplier
+```
+
+### 3. AABB Collision Logic
+The game uses Axis-Aligned Bounding Box (AABB) logic for precise hit registration on rectangular ship models, moving away from simple radius-based circles.
+```python
+# AABB hit detection for 140x40 bounding boxes
 if (s[0] - 140 < p[0] < s[0] + 140) and (s[1] - 40 < p[1] < s[1] + 40):
-    s[4] -= damage # Apply damage
-```
-
-#### Terrain Collision (Mathematical Boundaries)
-The "Strait" peninsula is defined by linear inequalities, preventing the player from clipping through the land.
-```python
-def is_in_strait(x, y):
-    if y < -1000 or y > -600: return False
-    limit_y = -600 - (400/700) * abs(x)
-    return y < limit_y # Collision if Y is below the triangle's edge
-```
-
-### 3. Ballistics & Weaponry
-Projectiles are calculated using the absolute orientation of the turret. RPGs feature a specialized transformation that rotates the model to face its velocity vector.
-```python
-# Projectile heading calculation
-angle = math.degrees(math.atan2(p[3], p[2]))
-glRotatef(angle, 0, 0, 1)  # Yaw
-glRotatef(90, 0, 1, 0)     # Tip flat onto plane
+    s[4] -= damage
 ```
 
 ---
 
-## 📸 Screenshots
-
-> **Note to Developer:** To add screenshots, take the following captures and save them in a folder named `docs/`. Replace the placeholders below with your file paths.
-
-### 1. Modern Follow Camera
-![Follow Mode Placeholder](docs/follow_camera.png)
-*Modern Warship perspective following the turret's orientation.*
-
-### 2. Tactical Engagement
-![Combat MG Placeholder](docs/combat_mg.png)
-*Machine gun engagement with the dynamic health bar and HUD visible.*
-
-### 3. RPG Ballistics
-![Combat RPG Placeholder](docs/combat_rpg.png)
-*RPG projectile rotation and impact on enemy hull.*
-
-### 4. Tactical Dashboard
-![Dashboard Placeholder](docs/dashboard.png)
-*Close-up of the propulsion, hull integrity, and battery status HUD.*
+## 🕹️ Controls
+- **W / S**: Shift Gears Up/Down.
+- **A / D**: Rotate Vessel Hull.
+- **Left / Right Arrows**: Independent Turret Rotation.
+- **1 / 2**: Toggle Weapons System.
+- **Mouse Left / R-Shift**: Fire Main Battery.
+- **Mouse Right**: Toggle Camera (Orbital vs. Follow mode).
+- **R**: Full Tactical Reset.
 
 ---
 
-## 🚀 Setup & Installation
-1. Install Python 3.x.
-2. Install requirements:
-   ```bash
-   pip install PyOpenGL PyOpenGL_accelerate
-   ```
-3. Run the game:
-   ```bash
-   python bait_of_tormuz.py
-   ```
+## 📸 Tactical View (Screenshots)
+
+> **Instructions:** Place screenshots in `/docs` to populate these views.
+
+- **[Follow Camera View]**: docs/follow_camera.png
+- **[AABB Collision in Action]**: docs/aabb_view.png
+- **[RPG Ballistic Trajectory]**: docs/rpg_facing.png
+- **[Naval HUD Overview]**: docs/hud_view.png
 
 ---
 
-## ⚓ Future Roadmap
-- [ ] Implement particle systems for water wakes and explosions.
-- [ ] Add sound effects for engine gears and weapon fire.
-- [ ] Introduce varying weather conditions (Fog/Night) affecting visibility.
-- [ ] Add a Boss-class vessel after 5000 points.
+## 🚀 Setup
+```bash
+pip install PyOpenGL
+python bait_of_tormuz.py
+```
