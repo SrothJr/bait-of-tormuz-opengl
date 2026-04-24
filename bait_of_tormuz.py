@@ -3,7 +3,7 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 import random
 import math
-
+GLUT_KEY_SHIFT_R = 113
 #==================== VARIABLES ==============================
 
 # system
@@ -23,12 +23,14 @@ player_pos_x = 0
 player_pos_y = 0
 player_hull_angle = 0
 player_turret_angle = 0
+speeds = [-0.03, 0, 0.05, 0.1]
+gear = 1
 
 # ships
 ships = []
 max_ships = 5
 ship_spawn_timer = 0
-ship_spawn_rate = 60
+ship_spawn_rate = 1200
 ship_speed_min = 0.01
 ship_speed_max = 0.03
 
@@ -131,7 +133,7 @@ def draw_land():
     glVertex3f(GRID_LENGTH, -GRID_LENGTH - 150, 30)
     glVertex3f(-GRID_LENGTH, -GRID_LENGTH - 150, 30)
 
-    glVertex3f(0, -300, 10)
+    glVertex3f(0, -600, 10)
     glVertex3f(-700, -GRID_LENGTH, 20)
     glVertex3f(0, -GRID_LENGTH, 20)
     glVertex3f(700, -GRID_LENGTH, 20)
@@ -397,23 +399,15 @@ def fire_weapon():
 def keyboardListener(key, x, y):
     global player_pos_x, player_pos_y, player_hull_angle, player_turret_angle
     global current_weapon, game_over, score, penalties
-    speed = 12
+    global speeds, gear
+
     turn_speed = 3
 
-    dx = math.cos(math.radians(player_hull_angle - 90)) * speed
-    dy = math.sin(math.radians(player_hull_angle - 90)) * speed
-
     if key == b"w":
-        if -GRID_LENGTH < player_pos_x + dx < GRID_LENGTH:
-            player_pos_x += dx
-        if -GRID_LENGTH < player_pos_y + dy < GRID_LENGTH:
-            player_pos_y += dy
+        gear = min(3, gear + 1)
     
     if key == b's':
-        if -GRID_LENGTH < player_pos_x - dx < GRID_LENGTH:
-            player_pos_x -= dx
-        if -GRID_LENGTH < player_pos_y - dy < GRID_LENGTH:
-            player_pos_y -= dy
+        gear = max(0, gear - 1)
 
     if key == b'a':
         player_hull_angle += turn_speed
@@ -445,6 +439,8 @@ def specialKeyListener(key, x, y):
         camera_height -= 20
     if key == GLUT_KEY_UP:
         camera_height += 20
+    if key == GLUT_KEY_SHIFT_R:
+        fire_weapon()
 
 def mouseListener(button, state, x, y):
     global camera_mode
@@ -462,9 +458,18 @@ def idle():
     global firing_cooldown, projectiles
     global score, penalties, game_over
     global rpg_ammo, total_damage
+    global speeds, gear, player_pos_x, player_pos_y, player_hull_angle
 
     if game_over:
         return
+
+    dx = math.cos(math.radians(player_hull_angle - 90)) * speeds[gear]
+    dy = math.sin(math.radians(player_hull_angle - 90)) * speeds[gear]
+
+    if -GRID_LENGTH < player_pos_x + dx < GRID_LENGTH:
+        player_pos_x += dx
+    if -GRID_LENGTH < player_pos_y + dy < GRID_LENGTH:
+        player_pos_y += dy
 
     if firing_cooldown > 0:
         firing_cooldown -= 1
@@ -473,7 +478,7 @@ def idle():
     if ship_spawn_timer > ship_spawn_rate and len(ships) < max_ships:
         ship_spawn_timer = 0
         
-        y_pos = random.randint(-GRID_LENGTH + 100, GRID_LENGTH - 100)
+        y_pos = random.randint(-GRID_LENGTH + 450, GRID_LENGTH - 100)
         
         speed_multiplier = 1 + (score / 1000)
         speed = random.uniform(ship_speed_min, ship_speed_max) * speed_multiplier
