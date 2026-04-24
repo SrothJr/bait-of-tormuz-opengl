@@ -16,6 +16,7 @@ camera_angle = 90
 camera_height = 500
 camera_radius = 400
 fovY = 120
+camera_mode = 1
 
 # player
 player_pos_x = 0
@@ -55,7 +56,7 @@ def draw_text(x, y, text, font=GLUT_BITMAP_HELVETICA_18):
     glLoadIdentity()
     
     # Set up an orthographic projection that matches window coordinates
-    gluOrtho2D(0, 1000, 0, 800)  # left, right, bottom, top
+    gluOrtho2D(0, WINDOW_WIDTH, 0, WINDOW_HEIGHT)  # left, right, bottom, top
 
     
     glMatrixMode(GL_MODELVIEW)
@@ -81,12 +82,30 @@ def setupCamera():
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
 
-    x = math.cos(math.radians(camera_angle)) * camera_radius
-    y = math.sin(math.radians(camera_angle)) * camera_radius
+    if camera_mode == 1:
+        rad = math.radians(player_turret_angle - 90)
+        dir_x = math.cos(rad)
+        dir_y = math.sin(rad)
 
-    gluLookAt(x, y, camera_height,
-              0, 0, 0,
-              0, 0, 1)
+        cam_dist = 100
+        cam_z = 100
+
+        cam_x = player_pos_x - (dir_x * cam_dist)
+        cam_y = player_pos_y - (dir_y * cam_dist)
+
+        look_x = player_pos_x + (dir_x * 100)
+        look_y = player_pos_y + (dir_y * 100)
+
+        gluLookAt(cam_x, cam_y, cam_z,
+                  look_x, look_y, 0,
+                  0, 0, 1)
+    else:
+        x = math.cos(math.radians(camera_angle)) * camera_radius
+        y = math.sin(math.radians(camera_angle)) * camera_radius
+
+        gluLookAt(x, y, camera_height,
+                0, 0, 0,
+                0, 0, 1)
     
 
 def draw_sea():
@@ -358,7 +377,7 @@ def fire_weapon():
     elif current_weapon == 2:
         speed = 0.5
         damage = 50
-        firing_cooldown = 30
+        firing_cooldown = 900
         rpg_ammo -= 1
     
     dx = (direction_x * speed)
@@ -413,7 +432,6 @@ def keyboardListener(key, x, y):
 
 def specialKeyListener(key, x, y):
     global camera_angle, camera_height, player_turret_angle
-
     if key == GLUT_KEY_LEFT:
         player_turret_angle += 5
     if key == GLUT_KEY_RIGHT:
@@ -424,9 +442,15 @@ def specialKeyListener(key, x, y):
         camera_height += 20
 
 def mouseListener(button, state, x, y):
+    global camera_mode
     if button == GLUT_LEFT_BUTTON and state == GLUT_DOWN:
         print("Left click works!")
         fire_weapon()
+    if button == GLUT_RIGHT_BUTTON and state == GLUT_DOWN:
+        if camera_mode == 1:
+            camera_mode = 0
+        else:
+            camera_mode = 1
 
 def idle():
     global ship_spawn_timer, ships
