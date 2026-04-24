@@ -301,10 +301,79 @@ def draw_health_bar(x, y, health, max_health):
     glutSolidCube(10)
     glPopMatrix()
 
+def draw_projectiles():
+    quad = gluNewQuadric()
+
+    for p in projectiles:
+        glPushMatrix()
+        glTranslatef(p[0], p[1], 20)
+
+        glScalef(3, 3, 3)
+
+        if p[4] == 1:
+            glColor3f(1, 1, 0)
+            glutSolidCube(3)
+        elif p[4] == 2:
+            angle = math.degrees(math.atan2(p[3], p[2]))
+            # body
+            
+            glRotatef(angle, 0, 0, 1)
+            glRotatef(90, 0, 1, 0)
+            glScalef(2, 2, 2)
+            glColor3f(0.5, 0.5, 0.5)
+            gluCylinder(quad, 1.5, 1.5, 10, 8, 8)
+            # tip
+            glTranslatef(0, 0, 10)
+            glColor3f(1, 0.3, 0)
+            gluSphere(quad, 2, 8, 8)
+        glPopMatrix()
+
+
+
+
+
+# actions
+
+def fire_weapon():
+    global current_weapon, rpg_ammo, firing_cooldown
+
+    if firing_cooldown > 0:
+        return
+    if current_weapon == 2 and rpg_ammo <= 0:
+        print("No RPG Ammo!")
+        return
+    
+    # Calculate the absolute angle of the turret
+    # The ship is rotated by (player_hull_angle - 90) and the turret by (player_turret_angle - player_hull_angle)
+    # So the total rotation of the turret is (player_turret_angle - 90)
+    rad = math.radians(player_turret_angle - 90)
+    direction_x = math.cos(rad)
+    direction_y = math.sin(rad)
+
+    if current_weapon == 1:
+        speed = 2
+        damage = 10
+        firing_cooldown = 8
+    elif current_weapon == 2:
+        speed = 0.5
+        damage = 50
+        firing_cooldown = 30
+        rpg_ammo -= 1
+    
+    dx = (direction_x * speed)
+    dy = (direction_y * speed)
+
+    # The gun tip is at local x=25 (base at 5 + length 20). 
+    # With a scale of 2, the true distance is 50.
+    start_x = player_pos_x + (direction_x * 50)
+    start_y = player_pos_y + (direction_y * 50)
+
+    projectiles.append([start_x, start_y, dx, dy, current_weapon, damage])
+
 
 def keyboardListener(key, x, y):
     global player_pos_x, player_pos_y, player_hull_angle, player_turret_angle
-
+    global current_weapon
     speed = 12
     turn_speed = 3
 
@@ -328,6 +397,11 @@ def keyboardListener(key, x, y):
     
     if key == b'd':
         player_hull_angle -= turn_speed
+    
+    if key == b"1":
+        current_weapon = 1
+    if key == b"2":
+        current_weapon = 2
 
 def specialKeyListener(key, x, y):
     global camera_angle, camera_height, player_turret_angle
@@ -342,10 +416,15 @@ def specialKeyListener(key, x, y):
         camera_height += 20
 
 def mouseListener(button, state, x, y):
-    pass
+    if button == GLUT_LEFT_BUTTON and state == GLUT_DOWN:
+        fire_weapon()
 
 def idle():
     global ship_spawn_timer, ships
+    global firing_cooldown, projectiles
+
+    if firing_cooldown > 0:
+        firing_cooldown -= 1
     
     ship_spawn_timer += 1
     if ship_spawn_timer > ship_spawn_rate and len(ships) < max_ships:
@@ -368,6 +447,18 @@ def idle():
     
     # 3. Remove ships that went off-screen
     ships = [s for s in ships if s[0] > -GRID_LENGTH - 100]
+
+    # Move projectiles
+
+    active_projectiles = []
+    for p in projectiles:
+        p[0] += p[2]
+        p[1] += p[3]
+
+        if -GRID_LENGTH - 100 < p[0] < GRID_LENGTH + 100:
+            active_projectiles.append(p)
+    
+    projectiles = active_projectiles
     
     glutPostRedisplay()
 
@@ -393,6 +484,7 @@ def showScreen():
     draw_player()
     glPopMatrix()
 
+    # ships
     for s in ships:
         glPushMatrix()
         glTranslatef(s[0], s[1], 0)
@@ -400,6 +492,19 @@ def showScreen():
         draw_cargo_ship(s[3], s[4], s[5])
         glPopMatrix()
         draw_health_bar(s[0], s[1], s[4], s[5])
+    
+    # projectiles
+    glPushMatrix()
+    draw_projectiles()
+    glPopMatrix()
+
+
+
+    # Texts
+    if current_weapon == 1:
+        draw_text(10, WINDOW_HEIGHT - 30, f"Machine Gun [Ammo = Unlimited]")
+    elif current_weapon == 2:
+        draw_text(10, WINDOW_HEIGHT - 30, f"RPG [Ammo = {rpg_ammo}]")
 
     glutSwapBuffers()
 
