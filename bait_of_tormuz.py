@@ -20,16 +20,23 @@ fovY = 120
 # player
 player_pos_x = 0
 player_pos_y = 0
-player_hull_angle = 90
-player_turret_angle = 90
+player_hull_angle = 0
+player_turret_angle = 0
 
+# ships
 ships = []
 max_ships = 5
 ship_spawn_timer = 0
-ship_speed_min = 1.5
-ship_speed_max = 3
+ship_spawn_rate = 60
+ship_speed_min = 0.01
+ship_speed_max = 0.03
 
+# weapons
 
+projectiles = []
+current_weapon = 1
+rpg_ammo = 10
+firing_cooldown = 0
 
 
 
@@ -109,14 +116,14 @@ def draw_land():
 
 def draw_player():
     quad = gluNewQuadric()
-
+    # 1. Boat Hull (rotates with hull angle)
     glPushMatrix()
     glColor3f(0.35, 0.35, 0.4)
     glTranslatef(0, 0, 8)
     glScalef(4.5, 1.4, 0.8)
     glutSolidCube(10)
     glPopMatrix()
-
+    # 2. Bow
     glPushMatrix()
     glColor3f(0.3, 0.3, 0.35)
     glTranslatef(0, 0, 8)
@@ -124,29 +131,36 @@ def draw_player():
     glScalef(1.0, 1.2, 0.8)
     glutSolidCube(10)
     glPopMatrix()
-
+    # 3. Cabin Base (FIXED - rotates with turret)
     glPushMatrix()
+    # Rotate turret independently from hull
+    glRotatef(player_turret_angle - player_hull_angle, 0, 0, 1)
+    
     glColor3f(0.25, 0.3, 0.25)  
     glTranslatef(-5, 0, 18)
     glScalef(2.0, 1.2, 1.2)
     glutSolidCube(10)
     glPopMatrix()
-
+    # 4. Turret Head (FIXED - rotates with turret)  
     glPushMatrix()
+    glRotatef(player_turret_angle - player_hull_angle, 0, 0, 1)
+    
     glColor3f(0.2, 0.25, 0.2)
     glTranslatef(-5, 0, 25)
     glScalef(1.2, 0.8, 0.8)
     glutSolidCube(10)
     glPopMatrix()
-
+    # 5. Gun Barrel (FIXED - rotates with turret)
     glPushMatrix()
-    glColor3f(0.1, 0.1, 0.1)  # Black
+    glRotatef(player_turret_angle - player_hull_angle, 0, 0, 1)
+    
+    glColor3f(0.1, 0.1, 0.1)
     glTranslatef(5, 0, 23)
-    glRotatef(90, 0, 1, 0)  # Point along X-axis
+    glRotatef(90, 0, 1, 0)
     gluCylinder(quad, 1.2, 1.2, 20, 12, 12)
     glPopMatrix()
     
-    # 6. Radar/Antenna (back of cabin)
+    # 6. Radar/Antenna (stays with cabin)
     glPushMatrix()
     glColor3f(0.15, 0.15, 0.15)
     glTranslatef(-8, 0, 28)
@@ -154,7 +168,7 @@ def draw_player():
     gluCylinder(quad, 0.5, 0.5, 12, 8, 8)
     glPopMatrix()
     
-    # 7. Details: Deck strips
+    # 7. Deck strips
     glPushMatrix()
     glColor3f(0.5, 0.5, 0.55)
     glTranslatef(0, 8, 12)
@@ -193,37 +207,30 @@ def draw_cargo_ship(is_red_flag, health, max_health):
     # Bottom row
     glPushMatrix()
     glColor3f(0.85, 0.5, 0.15)  # Orange
-    glTranslatef(0, 18, 12)
-    glScalef(3.5, 1.2, 1.0)
+    glTranslatef(-5, 0, 12)  # FIXED: Y=0, not Y=18
+    glScalef(3.5, 1.8, 1.0)
     glutSolidCube(10)
     glPopMatrix()
     
     glPushMatrix()
     glColor3f(0.15, 0.4, 0.7)  # Blue
-    glTranslatef(-8, 18, 12)
-    glScalef(3.0, 1.2, 1.0)
+    glTranslatef(8, 0, 12)  # FIXED: Y=0
+    glScalef(2.5, 1.8, 1.0)
     glutSolidCube(10)
     glPopMatrix()
     
+    # Top row
     glPushMatrix()
     glColor3f(0.85, 0.5, 0.15)  # Orange
-    glTranslatef(8, 18, 12)
-    glScalef(3.0, 1.2, 1.0)
+    glTranslatef(-5, 0, 22)  # FIXED: Y=0
+    glScalef(2.5, 1.5, 0.8)
     glutSolidCube(10)
     glPopMatrix()
     
-    # Top row (smaller stack)
     glPushMatrix()
     glColor3f(0.15, 0.4, 0.7)  # Blue
-    glTranslatef(-5, 18, 22)
-    glScalef(2.5, 1.0, 0.8)
-    glutSolidCube(10)
-    glPopMatrix()
-    
-    glPushMatrix()
-    glColor3f(0.85, 0.5, 0.15)  # Orange
-    glTranslatef(5, 18, 22)
-    glScalef(2.5, 1.0, 0.8)
+    glTranslatef(8, 0, 22)  # FIXED: Y=0
+    glScalef(2.0, 1.5, 0.8)
     glutSolidCube(10)
     glPopMatrix()
     
@@ -296,15 +303,39 @@ def draw_health_bar(x, y, health, max_health):
 
 
 def keyboardListener(key, x, y):
-    pass
+    global player_pos_x, player_pos_y, player_hull_angle, player_turret_angle
+
+    speed = 12
+    turn_speed = 3
+
+    dx = math.cos(math.radians(player_hull_angle - 90)) * speed
+    dy = math.sin(math.radians(player_hull_angle - 90)) * speed
+
+    if key == b"w":
+        if -GRID_LENGTH < player_pos_x + dx < GRID_LENGTH:
+            player_pos_x += dx
+        if -GRID_LENGTH < player_pos_y + dy < GRID_LENGTH:
+            player_pos_y += dy
+    
+    if key == b's':
+        if -GRID_LENGTH < player_pos_x - dx < GRID_LENGTH:
+            player_pos_x -= dx
+        if -GRID_LENGTH < player_pos_y - dy < GRID_LENGTH:
+            player_pos_y -= dy
+
+    if key == b'a':
+        player_hull_angle += turn_speed
+    
+    if key == b'd':
+        player_hull_angle -= turn_speed
 
 def specialKeyListener(key, x, y):
-    global camera_angle, camera_height
+    global camera_angle, camera_height, player_turret_angle
 
     if key == GLUT_KEY_LEFT:
-        camera_angle += 5
+        player_turret_angle += 5
     if key == GLUT_KEY_RIGHT:
-        camera_angle -= 5
+        player_turret_angle -= 5
     if key == GLUT_KEY_DOWN:
         camera_height -= 20
     if key == GLUT_KEY_UP:
@@ -314,7 +345,29 @@ def mouseListener(button, state, x, y):
     pass
 
 def idle():
+    global ship_spawn_timer, ships
     
+    ship_spawn_timer += 1
+    if ship_spawn_timer > ship_spawn_rate and len(ships) < max_ships:
+        ship_spawn_timer = 0
+        
+        # Spawn at right edge
+        y_pos = random.randint(-GRID_LENGTH + 100, GRID_LENGTH - 100)
+        speed = random.uniform(ship_speed_min, ship_speed_max)
+        
+        # Random: red (enemy) or green (ally)
+        is_red = random.choice([True, False])
+        health = 50 if is_red else 30
+        
+        # Ship data: [x, y, speed, is_red, health, max_health]
+        ships.append([GRID_LENGTH, y_pos, speed, is_red, health, health])
+    
+    # 2. Move ships left
+    for s in ships:
+        s[0] -= s[2]  # Move left by speed
+    
+    # 3. Remove ships that went off-screen
+    ships = [s for s in ships if s[0] > -GRID_LENGTH - 100]
     
     glutPostRedisplay()
 
@@ -343,6 +396,7 @@ def showScreen():
     for s in ships:
         glPushMatrix()
         glTranslatef(s[0], s[1], 0)
+        glScalef(4, 4, 4)
         draw_cargo_ship(s[3], s[4], s[5])
         glPopMatrix()
         draw_health_bar(s[0], s[1], s[4], s[5])
