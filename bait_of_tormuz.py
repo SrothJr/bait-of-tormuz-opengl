@@ -319,7 +319,7 @@ def draw_health_bar(health, max_health):
 
     # Foreground (green to red based on health)
     glPushMatrix()
-    offset_x = -20 * (1 - ratio)
+    offset_x = 20.5 * (1 - ratio)
     glTranslatef(offset_x, 0, 0.5)
     if ratio > 0.6:
         glColor3f(0.0, 1.0, 0.0)  # Green
@@ -328,7 +328,7 @@ def draw_health_bar(health, max_health):
     else:
         glColor3f(1.0, 0.0, 0.0)  # Red
     
-    glScalef(4 * ratio, 0.8, 0.3)
+    glScalef(4.1 * ratio, 0.9, 0.4)
     glutSolidCube(10)
     glPopMatrix()
     glPopMatrix()
@@ -561,7 +561,7 @@ def idle():
             penalties += 1
             print(f"Red ship escaped! Penalty {penalties}")
     
-    ships = [s for s in ships if s[0] > -GRID_LENGTH - 100]
+    ships = [s for s in ships if s[0] >= -GRID_LENGTH]
 
     # Move projectiles
     active_projectiles = []
@@ -587,7 +587,7 @@ def idle():
                         if score % 1000 == 0:
                             rpg_ammo += 5
                             penalties = max(0, penalties - 1)
-                            health = min(100, health + 10)
+                            player_health = min(100, player_health + 10)
                             print(f"Bonus +5 RPG Ammo! [Total: {rpg_ammo}]")
                             print(f"One penalty reduced! Penalties = {penalties}")
 
