@@ -16,6 +16,15 @@ The ship operates on a 4-gear discrete movement system. Unlike standard WASD mov
 ### ⚔️ Tactical Arsenal
 - **Machine Gun (MG):** Unlimited ammunition, high rate of fire, 10 damage per round.
 - **RPG Battery:** High-impact shells dealing 50 damage. Projectiles dynamically rotate to face their trajectory vector for visual realism.
+- **Homing Missile:** Advanced heat-seeking missile that automatically locks onto and tracks the nearest enemy vessel. Deals 90 damage.
+- **Torpedo:** Underwater homing projectile that tracks the nearest enemy ship. Features a unique visual design and wake. Deals 80 damage.
+- **Homing Mines:** Deployable mines that autonomously chase nearby enemies and detonate for 100 damage upon impact.
+- **Combat Drone:** Deployable drone that flies out from land to automatically hunt and attack enemy ships for massive damage.
+
+### ✨ Special Abilities
+- **Learner Mode:** Interactive 15-step tutorial designed to guide players through game mechanics, movement, shooting, and abilities.
+- **Double Speed Boost:** Pressing the `Spacebar` toggles a double-speed boost multiplier for all gears (including reverse). The HUD updates to indicate `(BOOST)` when active.
+- **Cheat Mode:** An auto-aim and auto-fire system. When toggled, the turret automatically calculates the angle to the nearest enemy ship, rotates towards it, and automatically fires the Machine Gun when perfectly aligned.
 
 ### 🛡️ Survival & Collision
 The simulation features advanced world-space interactions:
@@ -74,8 +83,13 @@ if (s[0] - 140 < p[0] < s[0] + 140) and (s[1] - 40 < p[1] < s[1] + 40):
 ## 🕹️ Controls
 - **W / S**: Shift Gears Up/Down.
 - **A / D**: Rotate Vessel Hull (Steer).
+- **Spacebar**: Toggle Double Speed Boost.
 - **Left / Right Arrows**: Independent Turret Rotation.
-- **1 / 2**: Toggle Weapons System.
+- **1 / 2 / 3 / 4**: Switch Weapons (1=MG, 2=RPG, 3=Missile, 4=Torpedo).
+- **C**: Toggle Cheat Mode Auto-Aim & Fire.
+- **L**: Toggle Learner Mode Tutorial.
+- **O / P**: Deploy / Recall Combat Drone.
+- **M**: Drop Homing Mine.
 - **Mouse Left / R-Shift**: Fire Main Battery.
 - **Mouse Right**: Toggle Camera (Orbital vs. Follow mode).
 - **R**: Full Tactical Reset.

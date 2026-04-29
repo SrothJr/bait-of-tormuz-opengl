@@ -30,6 +30,9 @@ speeds = [-0.05, 0, 0.07, 0.14]
 gear = 1
 player_health = 100
 player_max_health = 100
+# --- SALMAN'S DOUBLE SPEED BOOST START ---
+boost_active = False
+# --- SALMAN'S DOUBLE SPEED BOOST END ---
 
 # ships
 ships = []
@@ -40,9 +43,19 @@ ship_speed_min = 0.01
 ship_speed_max = 0.03
 
 # weapons
+
 projectiles = []
 current_weapon = 1
 rpg_ammo = 10
+# --- SALMAN'S MISSILE FEATURE START ---
+missile_ammo = 5
+# --- SALMAN'S MISSILE FEATURE END ---
+# --- SALMAN'S TORPEDO FEATURE START ---
+torpedo_ammo = 3
+# --- SALMAN'S TORPEDO FEATURE END ---
+# --- SALMAN'S CHEAT MODE START ---
+cheat_mode = False
+# --- SALMAN'S CHEAT MODE END ---
 firing_cooldown = 0
 
 # Gameplay
@@ -89,13 +102,21 @@ def draw_text(x, y, text, font=GLUT_BITMAP_HELVETICA_18):
     glMatrixMode(GL_PROJECTION)
     glPushMatrix()
     glLoadIdentity()
-    gluOrtho2D(0, WINDOW_WIDTH, 0, WINDOW_HEIGHT)
+    
+    # Set up an orthographic projection that matches window coordinates
+    gluOrtho2D(0, WINDOW_WIDTH, 0, WINDOW_HEIGHT)  # left, right, bottom, top
+
+    
     glMatrixMode(GL_MODELVIEW)
     glPushMatrix()
     glLoadIdentity()
+    
+    # Draw text at (x, y) in screen coordinates
     glRasterPos2f(x, y)
     for ch in text:
         glutBitmapCharacter(font, ord(ch))
+    
+    # Restore original projection and modelview matrices
     glPopMatrix()
     glMatrixMode(GL_PROJECTION)
     glPopMatrix()
@@ -112,15 +133,27 @@ def setupCamera():
         rad = math.radians(player_turret_angle - 90)
         dir_x = math.cos(rad)
         dir_y = math.sin(rad)
-        cam_x = player_pos_x - (dir_x * 100)
-        cam_y = player_pos_y - (dir_y * 100)
+
+        cam_dist = 100
+        cam_z = 100
+
+        cam_x = player_pos_x - (dir_x * cam_dist)
+        cam_y = player_pos_y - (dir_y * cam_dist)
+
         look_x = player_pos_x + (dir_x * 100)
         look_y = player_pos_y + (dir_y * 100)
-        gluLookAt(cam_x, cam_y, 100, look_x, look_y, 0, 0, 0, 1)
+
+        gluLookAt(cam_x, cam_y, cam_z,
+                  look_x, look_y, 0,
+                  0, 0, 1)
     else:
         x = math.cos(math.radians(camera_angle)) * camera_radius
         y = math.sin(math.radians(camera_angle)) * camera_radius
-        gluLookAt(x, y, camera_height, 0, 0, 0, 0, 0, 1)
+
+        gluLookAt(x, y, camera_height,
+                0, 0, 0,
+                0, 0, 1)
+    
 
 def draw_sea():
     glBegin(GL_QUADS)
@@ -150,12 +183,14 @@ def draw_land():
 
 def draw_player():
     quad = gluNewQuadric()
+    # 1. Boat Hull 
     glPushMatrix()
     glColor3f(0.35, 0.35, 0.4)
     glTranslatef(0, 0, 8)
     glScalef(4.5, 1.4, 0.8)
     glutSolidCube(10)
     glPopMatrix()
+    # 2. Bow
     glPushMatrix()
     glColor3f(0.3, 0.3, 0.35)
     glTranslatef(0, 0, 8)
@@ -163,39 +198,51 @@ def draw_player():
     glScalef(1.0, 1.2, 0.8)
     glutSolidCube(10)
     glPopMatrix()
+    # 3. Cabin Base 
     glPushMatrix()
+    # Rotate turret independently from hull
     glRotatef(player_turret_angle - player_hull_angle, 0, 0, 1)
+    
     glColor3f(0.25, 0.3, 0.25)  
     glTranslatef(-5, 0, 18)
     glScalef(2.0, 1.2, 1.2)
     glutSolidCube(10)
     glPopMatrix()
+    # 4. Turret Head (rotates with turret)  
     glPushMatrix()
     glRotatef(player_turret_angle - player_hull_angle, 0, 0, 1)
+    
     glColor3f(0.2, 0.25, 0.2)
     glTranslatef(-5, 0, 25)
     glScalef(1.2, 0.8, 0.8)
     glutSolidCube(10)
     glPopMatrix()
+    # 5. Gun Barrel (rotates with turret)
     glPushMatrix()
     glRotatef(player_turret_angle - player_hull_angle, 0, 0, 1)
+    
     glColor3f(0.1, 0.1, 0.1)
     glTranslatef(5, 0, 23)
     glRotatef(90, 0, 1, 0)
     gluCylinder(quad, 1.2, 1.2, 20, 12, 12)
     glPopMatrix()
+    
+    # 6. Radar (stays with cabin)
     glPushMatrix()
     glColor3f(0.15, 0.15, 0.15)
     glTranslatef(-20, 5, 20)
     glRotatef(180, 1, 0, 0)
     gluCylinder(quad, 0.5, 0.5, 12, 8, 8)
     glPopMatrix()
+    
+    # 7. Deck strips
     glPushMatrix()
     glColor3f(0.5, 0.5, 0.55)
     glTranslatef(0, 8, 12)
     glScalef(4.0, 0.2, 0.5)
     glutSolidCube(10)
     glPopMatrix()
+    
     glPushMatrix()
     glColor3f(0.5, 0.5, 0.55)
     glTranslatef(0, -8, 12)
@@ -205,12 +252,16 @@ def draw_player():
 
 def draw_cargo_ship(is_red_flag, health, max_health):
     quad = gluNewQuadric()
+    
+    # 1. Main Hull (long, flat bottom)
     glPushMatrix()
     glColor3f(0.2, 0.2, 0.25)  
     glTranslatef(0, 0, 6)
     glScalef(7.0, 2.0, 0.8)
     glutSolidCube(10)
     glPopMatrix()
+    
+    # 2. Bow (front)
     glPushMatrix()
     glColor3f(0.18, 0.18, 0.22)
     glTranslatef(30, 0, 6)
@@ -218,51 +269,67 @@ def draw_cargo_ship(is_red_flag, health, max_health):
     glScalef(1.0, 1.5, 0.8)
     glutSolidCube(10)
     glPopMatrix()
+    
+    # 3. Cargo Containers (stacked on deck)
+    # Bottom row
     glPushMatrix()
     glColor3f(0.85, 0.5, 0.15) 
     glTranslatef(-5, 0, 12)  
     glScalef(3.5, 1.8, 1.0)
     glutSolidCube(10)
     glPopMatrix()
+    
     glPushMatrix()
     glColor3f(0.5, 0.4, 0.3)
     glTranslatef(8, 0, 12) 
     glScalef(2.5, 1.8, 1.0)
     glutSolidCube(10)
     glPopMatrix()
+    
+    # Top row
     glPushMatrix()
     glColor3f(0.85, 0.5, 0.15)
     glTranslatef(-5, 0, 22)  
     glScalef(2.5, 1.5, 0.8)
     glutSolidCube(10)
     glPopMatrix()
+    
     glPushMatrix()
     glColor3f(0.5, 0.4, 0.7)  
     glTranslatef(8, 0, 22)  
     glScalef(2.0, 1.5, 0.8)
     glutSolidCube(10)
     glPopMatrix()
+    
+    # 4. Smokestacks (at back)
     glPushMatrix()
     glColor3f(0.1, 0.1, 0.1)
     glTranslatef(-25, 10, 10)
     gluCylinder(quad, 3, 3, 18, 10, 10)
     glPopMatrix()
+    
     glPushMatrix()
     glColor3f(0.1, 0.1, 0.1)
     glTranslatef(-25, -10, 10)
     gluCylinder(quad, 3, 3, 18, 10, 10)
     glPopMatrix()
+    
+    # 5. Bridge (at back top)
     glPushMatrix()
-    glColor3f(0.9, 0.9, 0.95)
+    glColor3f(0.9, 0.9, 0.95)  # White
     glTranslatef(-28, 0, 16)
     glScalef(2.0, 1.5, 1.2)
     glutSolidCube(10)
     glPopMatrix()
+    
+    # 6. Flag Pole & Flag
     glPushMatrix()
     glColor3f(0.8, 0.8, 0.8)
     glTranslatef(-30, 0, 22)
     gluCylinder(quad, 0.8, 0.8, 25, 8, 8)
     glPopMatrix()
+    
+    # Flag 
     glPushMatrix()
     if is_red_flag:
         glColor3f(1.0, 0.0, 0.0)  
@@ -279,22 +346,28 @@ def draw_cargo_ship(is_red_flag, health, max_health):
 
 def draw_health_bar(health, max_health):
     ratio = health / max_health
+    
     glPushMatrix()
     glTranslatef(0, 0, 35)
+    
+    # Background (red - damage)
     glPushMatrix()
     glColor3f(0.3, 0.0, 0.0)
     glScalef(4.0, 0.8, 0.3)
     glutSolidCube(10)
     glPopMatrix()
+
+    # Foreground (green to red based on health)
     glPushMatrix()
     offset_x = 20.5 * (1 - ratio)
     glTranslatef(offset_x, 0, 0.5)
     if ratio > 0.6:
-        glColor3f(0.0, 1.0, 0.0)
+        glColor3f(0.0, 1.0, 0.0)  # Green
     elif ratio > 0.3:
-        glColor3f(1.0, 1.0, 0.0)
+        glColor3f(1.0, 1.0, 0.0)  # Yellow
     else:
-        glColor3f(1.0, 0.0, 0.0)
+        glColor3f(1.0, 0.0, 0.0)  # Red
+    
     glScalef(4.1 * ratio, 0.9, 0.4)
     glutSolidCube(10)
     glPopMatrix()
@@ -413,13 +486,56 @@ def draw_projectiles():
             angle = math.degrees(math.atan2(p[3], p[2]))
             glRotatef(angle, 0, 0, 1)
             glRotatef(90, 0, 1, 0)
+            glScalef(2/3, 2/3, 2/3) # Adjust for outer scale
             glColor3f(0.5, 0.5, 0.5)
             gluCylinder(quad, 1.5, 1.5, 10, 8, 8)
             glTranslatef(0, 0, 10)
             glColor3f(1, 0.3, 0)
             gluSphere(quad, 2, 8, 8)
             new_projectiles.append(p)
+        # --- SALMAN'S MISSILE FEATURE START ---
         elif p[4] == 3:
+            angle = math.degrees(math.atan2(p[3], p[2]))
+            glRotatef(angle, 0, 0, 1)
+            glRotatef(90, 0, 1, 0)
+            glScalef(2/3, 2/3, 2/3) # Adjust for outer scale
+            glColor3f(0.8, 0.1, 0.1)
+            gluCylinder(quad, 1.2, 1.2, 15, 8, 8)
+            glTranslatef(0, 0, 15)
+            glColor3f(1.0, 1.0, 1.0)
+            gluSphere(quad, 1.2, 8, 8)
+            glTranslatef(0, 0, -12)
+            glColor3f(0.2, 0.2, 0.2)
+            glScalef(3, 0.2, 2)
+            glutSolidCube(1)
+            new_projectiles.append(p)
+        # --- SALMAN'S MISSILE FEATURE END ---
+        # --- SALMAN'S TORPEDO FEATURE START ---
+        elif p[4] == 4:
+            angle = math.degrees(math.atan2(p[3], p[2]))
+            
+            glPushMatrix()
+            glTranslatef(0, 0, -25)
+            glRotatef(angle, 0, 0, 1)
+            glRotatef(90, 0, 1, 0)
+            glScalef(2/3, 2/3, 2/3) # Adjust for outer scale
+            glColor3f(0.1, 0.2, 0.2)
+            gluCylinder(quad, 1.2, 1.2, 12, 8, 8)
+            glTranslatef(0, 0, 12)
+            glColor3f(0.15, 0.25, 0.25)
+            gluSphere(quad, 1.2, 8, 8)
+            glPopMatrix()
+
+            glPushMatrix()
+            glTranslatef(0, 0, -20)
+            glColor3f(0.8, 0.9, 1.0)
+            glutSolidCube(3)
+            glTranslatef(-math.cos(math.radians(angle))*8, -math.sin(math.radians(angle))*8, 0)
+            glutSolidCube(2)
+            glPopMatrix()
+            new_projectiles.append(p)
+        # --- SALMAN'S TORPEDO FEATURE END ---
+        elif p[4] == 5:
             glColor3f(0, 1, 1)
             glLineWidth(3)
             glBegin(GL_LINES)
@@ -427,14 +543,14 @@ def draw_projectiles():
             glVertex3f(0, 30, 0)
             glEnd()
             new_projectiles.append(p)
-        elif p[4] == 4:
+        elif p[4] == 6:
             draw_explosion(p[0], p[1])
             if len(p) <= 6:
                 p.append(0)
             p[6] += 1
             if p[6] <= 8:
                 new_projectiles.append(p)
-        elif p[4] == 5:
+        elif p[4] == 7:
             glColor3f(1, 0.5, 0)
             glPointSize(3)
             glBegin(GL_POINTS)
@@ -459,6 +575,11 @@ def draw_player_dashboard():
     elif gear == 3:
         gear_label = "FULL"
     
+    # --- SALMAN'S DOUBLE SPEED BOOST START ---
+    if boost_active:
+        gear_label += " (BOOST)"
+    # --- SALMAN'S DOUBLE SPEED BOOST END ---
+        
     draw_text(50, 40, f"GEAR: {gear_label}")
     draw_text(30, WINDOW_HEIGHT - 40, f"SCORE: {score}")
     draw_text(WINDOW_WIDTH - 300, WINDOW_HEIGHT - 40, f"PENALTIES: {penalties}/{max_penalties}")
@@ -467,9 +588,22 @@ def draw_player_dashboard():
     draw_text(WINDOW_WIDTH//2 - 65, 50, f"HULL: {int(player_health)}%")
     
     if current_weapon == 1:
-        draw_text(WINDOW_WIDTH - 400, 40, f"WEAPON: MG")
+        draw_text(WINDOW_WIDTH - 400, 40, f"WEAPON: MG - AMMO : UNLIMITED")
     elif current_weapon == 2:
-        draw_text(WINDOW_WIDTH - 400, 40, f"WEAPON: RPG - {rpg_ammo}")
+        draw_text(WINDOW_WIDTH - 400, 40, f"WEAPON: RPG - AMMO : {rpg_ammo}")
+    # --- SALMAN'S MISSILE FEATURE START ---
+    elif current_weapon == 3:
+        draw_text(WINDOW_WIDTH - 400, 40, f"WEAPON: MISSILE - AMMO : {missile_ammo}")
+    # --- SALMAN'S MISSILE FEATURE END ---
+    # --- SALMAN'S TORPEDO FEATURE START ---
+    elif current_weapon == 4:
+        draw_text(WINDOW_WIDTH - 400, 40, f"WEAPON: TORPEDO - AMMO : {torpedo_ammo}")
+    # --- SALMAN'S TORPEDO FEATURE END ---
+    
+    # --- SALMAN'S CHEAT MODE START ---
+    status = "ON" if cheat_mode else "OFF"
+    draw_text(WINDOW_WIDTH - 400, 65, f"CHEAT MODE: {status}")
+    # --- SALMAN'S CHEAT MODE END ---
     
     draw_text(WINDOW_WIDTH - 400, 15, f"DAMAGE: {int(total_damage)}")
     
@@ -522,7 +656,7 @@ def start_learner_mode():
     practice_ship = None
     
     learner_message = "STEP 1: Press W to go FASTER, S to SLOWER"
-    print("\n" + "="*60)
+    print("\\n" + "="*60)
     print("🎓 LEARNER MODE STARTED 🎓")
     print("="*60)
 
@@ -573,7 +707,7 @@ def next_learner_step():
         learner_message = "STEP 10: 5 penalties = GAME OVER"
     elif learner_step == 11:
         learner_message = "STEP 11: 🚁 DRONE - Press O to send drone from LAND to attack ENEMY ships!"
-        print("\n🚁 Drone flies from land to attack enemy ships directly!")
+        print("\\n🚁 Drone flies from land to attack enemy ships directly!")
     elif learner_step == 12:
         learner_message = "STEP 12: Watch drone fly to enemy and destroy it!"
         ships.append([500, 0, 0.02, True, 100, 100])
@@ -602,31 +736,31 @@ def check_learner_step():
     if learner_step == 1 and gear != 1:
         learner_step_complete = True
         learner_waiting = True
-        print("✓ Good! Press SPACE")
+        print("✓ Good! Press ENTER")
     elif learner_step == 2 and player_hull_angle != 0:
         learner_step_complete = True
         learner_waiting = True
-        print("✓ Good! Press SPACE")
+        print("✓ Good! Press ENTER")
     elif learner_step == 3 and player_turret_angle != 0:
         learner_step_complete = True
         learner_waiting = True
-        print("✓ Good! Press SPACE")
+        print("✓ Good! Press ENTER")
     elif learner_step == 4 and current_weapon == 2:
         learner_step_complete = True
         learner_waiting = True
-        print("✓ Good! Press SPACE")
+        print("✓ Good! Press ENTER")
     elif learner_step == 5 and total_damage > 0:
         learner_step_complete = True
         learner_waiting = True
-        print("✓ Good! Press SPACE")
+        print("✓ Good! Press ENTER")
     elif learner_step == 6 and score >= 100:
         learner_step_complete = True
         learner_waiting = True
-        print("✓ Perfect! Press SPACE")
+        print("✓ Perfect! Press ENTER")
     elif learner_step == 7 and (not ships or score > 0):
         learner_step_complete = True
         learner_waiting = True
-        print("✓ Good! Press SPACE")
+        print("✓ Good! Press ENTER")
     elif learner_step == 8 or learner_step == 10:
         learner_step_complete = True
         learner_waiting = True
@@ -636,27 +770,27 @@ def check_learner_step():
     elif learner_step == 11:
         learner_step_complete = True
         learner_waiting = True
-        print("\n✅ Press O to send drone from land to attack enemies!")
-        print("Press SPACE to continue")
+        print("\\n✅ Press O to send drone from land to attack enemies!")
+        print("Press ENTER to continue")
     elif learner_step == 12:
         if drone_arrived or total_damage > 0:
             learner_step_complete = True
             learner_waiting = True
             print("✓ Great! Drone destroyed the enemy!")
-            print("Press SPACE to continue")
+            print("Press ENTER to continue")
         else:
             print("→ Press O to send drone from land to attack the red ship!")
     elif learner_step == 13:
         learner_step_complete = True
         learner_waiting = True
-        print("\n✅ Press M to drop homing mines!")
-        print("Press SPACE to continue")
+        print("\\n✅ Press M to drop homing mines!")
+        print("Press ENTER to continue")
     elif learner_step == 14:
         if len(mines) > 0 or total_damage > score:
             learner_step_complete = True
             learner_waiting = True
             print("✓ Amazing!")
-            print("Press SPACE to complete training")
+            print("Press ENTER to complete training")
         else:
             print("→ Press M to drop a homing mine!")
     elif learner_step == 15:
@@ -687,41 +821,97 @@ def draw_learner_instructions():
     glEnd()
     
     draw_text(120, WINDOW_HEIGHT - 130, learner_message, GLUT_BITMAP_HELVETICA_18)
-    draw_text(120, WINDOW_HEIGHT - 100, "Press SPACE to continue", GLUT_BITMAP_HELVETICA_12)
+    draw_text(120, WINDOW_HEIGHT - 100, "Press ENTER to continue", GLUT_BITMAP_HELVETICA_12)
     step_text = f"Step {learner_step}/15"
     draw_text(WINDOW_WIDTH - 200, WINDOW_HEIGHT - 100, step_text, GLUT_BITMAP_HELVETICA_12)
 
 
 # ==================== ACTIONS ====================
 
+# --- SALMAN'S MISSILE FEATURE START ---
+def get_nearest_red_ship(px, py):
+    nearest = None
+    min_dist = float('inf')
+    for s in ships:
+        if s[3]: # is_red
+            dist = math.hypot(s[0] - px, s[1] - py)
+            if dist < min_dist:
+                min_dist = dist
+                nearest = s
+    return nearest
+# --- SALMAN'S MISSILE FEATURE END ---
+
 def fire_weapon():
-    global current_weapon, rpg_ammo, firing_cooldown
+    global current_weapon, rpg_ammo, missile_ammo, torpedo_ammo, firing_cooldown
+    
     if firing_cooldown > 0:
         return
     if current_weapon == 2 and rpg_ammo <= 0:
         print("No RPG Ammo!")
         return
+    # --- SALMAN'S MISSILE FEATURE START ---
+    if current_weapon == 3 and missile_ammo <= 0:
+        print("No Missile Ammo!")
+        return
+    # --- SALMAN'S MISSILE FEATURE END ---
+    # --- SALMAN'S TORPEDO FEATURE START ---
+    if current_weapon == 4 and torpedo_ammo <= 0:
+        print("No Torpedo Ammo!")
+        return
+    # --- SALMAN'S TORPEDO FEATURE END ---
     
     rad = math.radians(player_turret_angle - 90)
     direction_x = math.cos(rad)
     direction_y = math.sin(rad)
     
+    start_x = player_pos_x + (direction_x * 50)
+    start_y = player_pos_y + (direction_y * 50)
+
     if current_weapon == 1:
         speed = 2.5
         damage = 10
         firing_cooldown = 8
+        dx = (direction_x * speed)
+        dy = (direction_y * speed)
+        projectiles.append([start_x, start_y, dx, dy, current_weapon, damage])
     elif current_weapon == 2:
         speed = 0.6
         damage = 50
         firing_cooldown = 900
         rpg_ammo -= 1
-    
-    dx = direction_x * speed
-    dy = direction_y * speed
-    start_x = player_pos_x + (direction_x * 50)
-    start_y = player_pos_y + (direction_y * 50)
-    projectiles.append([start_x, start_y, dx, dy, current_weapon, damage])
-
+        dx = (direction_x * speed)
+        dy = (direction_y * speed)
+        projectiles.append([start_x, start_y, dx, dy, current_weapon, damage])
+    # --- SALMAN'S MISSILE FEATURE START ---
+    elif current_weapon == 3:
+        target = get_nearest_red_ship(start_x, start_y)
+        if not target:
+            print("No red ship detected! Missile abort.")
+            return
+        
+        speed = 0.8
+        damage = 90
+        firing_cooldown = 1200
+        missile_ammo -= 1
+        dx = (direction_x * speed)
+        dy = (direction_y * speed)
+        projectiles.append([start_x, start_y, dx, dy, current_weapon, damage, target])
+    # --- SALMAN'S MISSILE FEATURE END ---
+    # --- SALMAN'S TORPEDO FEATURE START ---
+    elif current_weapon == 4:
+        target = get_nearest_red_ship(start_x, start_y)
+        if not target:
+            print("No red target found!")
+            return
+        
+        speed = 0.4
+        damage = 80
+        firing_cooldown = 1500
+        torpedo_ammo -= 1
+        dx = (direction_x * speed)
+        dy = (direction_y * speed)
+        projectiles.append([start_x, start_y, dx, dy, current_weapon, damage, target])
+    # --- SALMAN'S TORPEDO FEATURE END ---
 
 # ==================== DRONE FUNCTIONS ====================
 
@@ -757,12 +947,12 @@ def activate_drone():
                 drone_x = random.randint(-GRID_LENGTH + 200, GRID_LENGTH - 200)
                 drone_y = -GRID_LENGTH - 50
             
-            print("\n" + "="*50)
+            print("\\n" + "="*50)
             print("🚁 DRONE DEPLOYED! 🚁")
             print("="*50)
             print("→ Drone flying from LAND to attack ENEMY ship!")
             print("→ ONE SHOT = 100 damage kills RED ships!")
-            print("="*50 + "\n")
+            print("="*50 + "\\n")
         else:
             print("No RED enemy ships to attack! Spawn some enemies first.")
     elif learner_mode and learner_step < 11:
@@ -778,8 +968,7 @@ def deactivate_drone():
         drone_spawning = False
         drone_arrived = False
         drone_target_ship = None
-        print("\n🚁 Drone recalled to base!\n")
-
+        print("\\n🚁 Drone recalled to base!\\n")
 
 # ==================== MINES FUNCTIONS ====================
 
@@ -852,7 +1041,7 @@ def update_mines():
                 print(f"💥💣 MINE EXPLOSION! -{mine_damage} damage!")
                 print(f"   Ship health: {old_health} → {s[4]}")
                 
-                projectiles.append([mine[0], mine[1], 0, 0, 4, 0])
+                projectiles.append([mine[0], mine[1], 0, 0, 6, 0]) # 6 = Mine Explosion
                 
                 if s[4] <= 0:
                     if s[3]:
@@ -871,7 +1060,6 @@ def update_mines():
                 mines.remove(mine)
                 break
 
-
 # ==================== KEYBOARD LISTENER ====================
 
 def keyboardListener(key, x, y):
@@ -880,6 +1068,7 @@ def keyboardListener(key, x, y):
     global gear, player_pos_x, player_pos_y, drone_active, mine_cooldown
     global learner_mode, learner_waiting, learner_step, mines, projectiles, ships
     global drone_spawning, drone_arrived
+    global missile_ammo, torpedo_ammo, cheat_mode, boost_active
     
     turn_speed = 3
     
@@ -891,7 +1080,7 @@ def keyboardListener(key, x, y):
             print("Already in learner mode! Press R to exit.")
             return
     
-    if key == b" " and learner_mode:
+    if key == b"\\r" and learner_mode:
         if learner_waiting:
             next_learner_step()
         return
@@ -920,7 +1109,7 @@ def keyboardListener(key, x, y):
     if key == b"r":
         if learner_mode:
             learner_mode = False
-            print("\nExited Learner Mode. Starting NORMAL mode!\n")
+            print("\\nExited Learner Mode. Starting NORMAL mode!\\n")
         
         drone_active = False
         drone_spawning = False
@@ -939,18 +1128,47 @@ def keyboardListener(key, x, y):
         player_turret_angle = 0
         player_hull_angle = 0
         
-        projectiles = []
-        ships = []
+        projectiles.clear()
+        ships.clear()
         
         if learner_mode:
             learner_step = 1
             learner_waiting = True
+        
+        # --- SALMAN'S MISSILE FEATURE START ---
+        missile_ammo = 5
+        # --- SALMAN'S MISSILE FEATURE END ---
+        # --- SALMAN'S TORPEDO FEATURE START ---
+        torpedo_ammo = 3
+        # --- SALMAN'S TORPEDO FEATURE END ---
+        # --- SALMAN'S CHEAT MODE START ---
+        cheat_mode = False
+        # --- SALMAN'S CHEAT MODE END ---
+        # --- SALMAN'S DOUBLE SPEED BOOST START ---
+        boost_active = False
+        # --- SALMAN'S DOUBLE SPEED BOOST END ---
     
     if key == b"1":
         current_weapon = 1
     if key == b"2":
         current_weapon = 2
-
+    # --- SALMAN'S MISSILE FEATURE START ---
+    if key == b"3":
+        current_weapon = 3
+    # --- SALMAN'S MISSILE FEATURE END ---
+    # --- SALMAN'S TORPEDO FEATURE START ---
+    if key == b"4":
+        current_weapon = 4
+    # --- SALMAN'S TORPEDO FEATURE END ---
+    # --- SALMAN'S CHEAT MODE START ---
+    if key == b"c":
+        cheat_mode = not cheat_mode
+    # --- SALMAN'S CHEAT MODE END ---
+    
+    # --- SALMAN'S DOUBLE SPEED BOOST START ---
+    if key == b" ":
+        boost_active = not boost_active
+    # --- SALMAN'S DOUBLE SPEED BOOST END ---
 
 def specialKeyListener(key, x, y):
     global camera_angle, camera_height, player_turret_angle
@@ -965,7 +1183,6 @@ def specialKeyListener(key, x, y):
     if key == GLUT_KEY_SHIFT_R:
         fire_weapon()
 
-
 def mouseListener(button, state, x, y):
     global camera_mode
     if button == GLUT_LEFT_BUTTON and state == GLUT_DOWN:
@@ -973,13 +1190,11 @@ def mouseListener(button, state, x, y):
     if button == GLUT_RIGHT_BUTTON and state == GLUT_DOWN:
         camera_mode = 1 - camera_mode
 
-
 def is_in_strait(x, y):
     if y < -1000 or y > -600:
         return False
     limit_y = -600 - (400/700) * abs(x)
     return y < limit_y
-
 
 # ==================== IDLE LOOP ====================
 
@@ -987,18 +1202,22 @@ def idle():
     global ship_spawn_timer, ships
     global firing_cooldown, projectiles
     global score, penalties, game_over
-    global rpg_ammo, total_damage
+    global rpg_ammo, missile_ammo, total_damage, torpedo_ammo
     global speeds, gear, player_pos_x, player_pos_y, player_hull_angle
     global player_health
+    global cheat_mode, player_turret_angle, current_weapon, boost_active
     global drone_active, drone_spawning, drone_arrived, drone_x, drone_y
     global drone_target_ship, drone_target_x, drone_target_y, drone_shoot_cooldown
     global mine_cooldown
     
     if game_over:
         return
-    
-    dx = math.cos(math.radians(player_hull_angle - 90)) * speeds[gear]
-    dy = math.sin(math.radians(player_hull_angle - 90)) * speeds[gear]
+        
+    # --- SALMAN'S DOUBLE SPEED BOOST START ---
+    speed_mult = 2.0 if boost_active else 1.0
+    dx = math.cos(math.radians(player_hull_angle - 90)) * speeds[gear] * speed_mult
+    dy = math.sin(math.radians(player_hull_angle - 90)) * speeds[gear] * speed_mult
+    # --- SALMAN'S DOUBLE SPEED BOOST END ---
     
     next_x = player_pos_x + dx
     next_y = player_pos_y + dy
@@ -1059,7 +1278,7 @@ def idle():
                 if dist > 0:
                     drone_x += (dx_drone / dist) * 5
                     drone_y += (dy_drone / dist) * 5
-                    projectiles.append([drone_x, drone_y, 0, 0, 5, 0])
+                    projectiles.append([drone_x, drone_y, 0, 0, 7, 0]) # 7 = drone spark
         
         if drone_arrived:
             # Hover near enemy and shoot
@@ -1079,7 +1298,7 @@ def idle():
                         shot_dx = shot_dx / shot_dist * 6
                         shot_dy = shot_dy / shot_dist * 6
                     
-                    projectiles.append([drone_x, drone_y, shot_dx, shot_dy, 3, drone_damage])
+                    projectiles.append([drone_x, drone_y, shot_dx, shot_dy, 5, drone_damage]) # 5 = drone shot
                     drone_shoot_cooldown = 12
                     print(f"🚁 DRONE attacking enemy ship! (100 damage)")
             else:
@@ -1104,6 +1323,30 @@ def idle():
     if firing_cooldown > 0:
         firing_cooldown -= 1
     
+    # --- SALMAN'S CHEAT MODE START ---
+    if cheat_mode:
+        target = get_nearest_red_ship(player_pos_x, player_pos_y)
+        if target:
+            target_rad = math.atan2(target[1] - player_pos_y, target[0] - player_pos_x)
+            target_angle = math.degrees(target_rad) + 90
+            
+            diff = (target_angle - player_turret_angle) % 360
+            if diff > 180:
+                diff -= 360
+            
+            if abs(diff) > 2.0:
+                if diff > 0:
+                    player_turret_angle += 2.0
+                else:
+                    player_turret_angle -= 2.0
+            
+            if abs(diff) < 5.0 and firing_cooldown <= 0:
+                prev_weapon = current_weapon
+                current_weapon = 1
+                fire_weapon()
+                current_weapon = prev_weapon
+    # --- SALMAN'S CHEAT MODE END ---
+
     # Mine cooldown
     if mine_cooldown > 0:
         mine_cooldown -= 1
@@ -1127,7 +1370,6 @@ def idle():
     for s in ships:
         s[0] -= s[2]
     
-    # Handle escaped ships
     escaped_ships = [s for s in ships if s[0] < -GRID_LENGTH]
     for s in escaped_ships:
         if s[3]:
@@ -1139,7 +1381,30 @@ def idle():
     active_projectiles = []
     
     for p in projectiles:
+        # --- SALMAN'S MISSILE FEATURE START ---
         if p[4] == 3:
+            target = p[6]
+            if target not in ships:
+                continue
+            
+            angle = math.atan2(target[1] - p[1], target[0] - p[0])
+            speed = 0.8
+            p[2] = math.cos(angle) * speed
+            p[3] = math.sin(angle) * speed
+        # --- SALMAN'S MISSILE FEATURE END ---
+        # --- SALMAN'S TORPEDO FEATURE START ---
+        if p[4] == 4:
+            target = p[6]
+            if target not in ships:
+                continue
+            
+            angle = math.atan2(target[1] - p[1], target[0] - p[0])
+            speed = 0.4
+            p[2] = math.cos(angle) * speed
+            p[3] = math.sin(angle) * speed
+        # --- SALMAN'S TORPEDO FEATURE END ---
+
+        if p[4] == 5: # Drone Shot
             p[0] += p[2]
             p[1] += p[3]
             
@@ -1177,7 +1442,7 @@ def idle():
                 active_projectiles.append(p)
             continue
         
-        if p[4] == 5:
+        if p[4] == 7: # Drone spark
             if len(p) <= 6:
                 p.append(0)
             p[6] += 1
@@ -1188,7 +1453,7 @@ def idle():
         p[0] += p[2]
         p[1] += p[3]
         
-        if p[4] == 4:
+        if p[4] == 6: # Mine explosion
             if len(p) <= 6:
                 p.append(0)
             p[6] += 1
@@ -1222,39 +1487,43 @@ def idle():
         
         if not hit_ship and (-GRID_LENGTH - 100 < p[0] < GRID_LENGTH + 100) and (-GRID_LENGTH - 100 < p[1] < GRID_LENGTH + 100):
             active_projectiles.append(p)
-    
+            
     projectiles = active_projectiles
     ships = [s for s in ships if s[4] > 0]
     
     if penalties >= max_penalties:
         game_over = True
-        print(f"\n💀 GAME OVER! Final Score: {score} 💀\n")
+        print(f"\\n💀 GAME OVER! Final Score: {score} 💀\\n")
     
     if learner_mode and not game_over:
         check_learner_step()
     
     glutPostRedisplay()
 
-
 def showScreen():
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glLoadIdentity()
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
+
     setupCamera()
-    
+
+    # drawing map
     draw_sea()
     draw_land()
-    
+
+    # player
     glPushMatrix()
     glTranslatef(player_pos_x, player_pos_y, 0)
     glRotatef(player_hull_angle - 90, 0, 0, 1)
+    glTranslatef(0, 0, 0)
     glScalef(2, 2, 2)
     draw_player()
     glPopMatrix()
     
     draw_drone()
     draw_mines()
-    
+
+    # ships
     for s in ships:
         glPushMatrix()
         glTranslatef(s[0], s[1], 0)
@@ -1263,19 +1532,22 @@ def showScreen():
         draw_health_bar(s[4], s[5])
         glPopMatrix()
     
+    # projectiles
+    glPushMatrix()
     draw_projectiles()
+    glPopMatrix()
+
     draw_player_dashboard()
     
     if learner_mode:
         draw_learner_instructions()
-    
+
     if game_over:
         draw_text(WINDOW_WIDTH//2, WINDOW_HEIGHT//2, "GAME OVER")
         draw_text(WINDOW_WIDTH//2, WINDOW_HEIGHT//2 - 30, f"Score: {score}")
         draw_text(WINDOW_WIDTH//2, WINDOW_HEIGHT//2 - 60, f"Press 'r' to Restart")
-    
-    glutSwapBuffers()
 
+    glutSwapBuffers()
 
 def main():
     glutInit()
@@ -1292,32 +1564,33 @@ def main():
     glutMouseFunc(mouseListener)
     glutIdleFunc(idle)
     
-    print("\n" + "="*60)
+    print("\\n" + "="*60)
     print("⚓ BAIT OF TORMUZ - NAVAL DEFENSE ⚓")
     print("="*60)
-    print("\n🎮 CONTROLS:")
+    print("\\n🎮 CONTROLS:")
     print("   W/S     - Change gears")
     print("   A/D     - Turn ship")
+    print("   SPACE   - Toggle Double Speed Boost")
     print("   ←/→     - Aim turret")
-    print("   1/2     - Switch weapons")
+    print("   1-4     - Switch weapons (1:MG, 2:RPG, 3:Missile, 4:Torpedo)")
+    print("   C       - Toggle Cheat Auto-Aim & Fire")
     print("   Mouse L - Fire")
     print("   R.Shift - Fire")
     print("   Mouse R - Camera")
     print("   R       - Restart")
-    print("\n🚁 DRONE:")
+    print("\\n🚁 DRONE:")
     print("   Press O  - Send drone from LAND to attack ENEMY ships!")
     print("   💥 ONE SHOT kill on RED ships!")
     print("   Press P  - Recall drone")
-    print("\n💣 HOMING MINES:")
+    print("\\n💣 HOMING MINES:")
     print("   Press M  - Drop mine that CHASES enemies!")
     print("   💥 100 damage - ONE SHOT kill!")
-    print("\n🎓 LEARNER MODE:")
+    print("\\n🎓 LEARNER MODE:")
     print("   Press L  - Start tutorial")
-    print("   SPACE   - Next step")
-    print("="*60 + "\n")
+    print("   ENTER    - Next step")
+    print("="*60 + "\\n")
     
     glutMainLoop()
-
 
 if __name__ == "__main__":
     main()
